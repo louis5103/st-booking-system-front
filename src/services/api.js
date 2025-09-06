@@ -47,6 +47,112 @@ export const authAPI = {
     }
 };
 
+// 공연장 API
+export const venueAPI = {
+    getAll: async () => {
+        const response = await apiClient.get('/venues');
+        return response.data;
+    },
+
+    getById: async (id) => {
+        const response = await apiClient.get(`/venues/${id}`);
+        return response.data;
+    },
+
+    create: async (venueData) => {
+        const response = await apiClient.post('/venues', venueData);
+        return response.data;
+    },
+
+    update: async (id, venueData) => {
+        const response = await apiClient.put(`/venues/${id}`, venueData);
+        return response.data;
+    },
+
+    updateSeatStructure: async (id, seatStructureData) => {
+        const response = await apiClient.put(`/venues/${id}/seat-structure`, seatStructureData);
+        return response.data;
+    },
+
+    delete: async (id) => {
+        const response = await apiClient.delete(`/venues/${id}`);
+        return response.data;
+    },
+
+    search: async (searchData) => {
+        const response = await apiClient.post('/venues/search', searchData);
+        return response.data;
+    },
+
+    getActive: async () => {
+        const response = await apiClient.get('/venues/active');
+        return response.data;
+    },
+
+    getStatistics: async () => {
+        const response = await apiClient.get('/venues/statistics');
+        return response.data;
+    },
+
+    checkName: async (name) => {
+        const response = await apiClient.get(`/venues/check-name?name=${encodeURIComponent(name)}`);
+        return response.data;
+    }
+};
+
+// 좌석 배치 API
+export const seatLayoutAPI = {
+    getByVenue: async (venueId) => {
+        const response = await apiClient.get(`/venues/${venueId}/seat-layouts`);
+        return response.data;
+    },
+
+    getActiveByVenue: async (venueId) => {
+        const response = await apiClient.get(`/venues/${venueId}/seat-layouts/active`);
+        return response.data;
+    },
+
+    getSeatMap: async (venueId) => {
+        const response = await apiClient.get(`/venues/${venueId}/seat-map`);
+        return response.data;
+    },
+
+    create: async (seatLayoutData) => {
+        const response = await apiClient.post('/seat-layouts', seatLayoutData);
+        return response.data;
+    },
+
+    createBulk: async (bulkData) => {
+        const response = await apiClient.post('/seat-layouts/bulk', bulkData);
+        return response.data;
+    },
+
+    update: async (id, seatLayoutData) => {
+        const response = await apiClient.put(`/seat-layouts/${id}`, seatLayoutData);
+        return response.data;
+    },
+
+    delete: async (id) => {
+        const response = await apiClient.delete(`/seat-layouts/${id}`);
+        return response.data;
+    },
+
+    deleteAllForVenue: async (venueId) => {
+        const response = await apiClient.delete(`/venues/${venueId}/seat-layouts`);
+        return response.data;
+    },
+
+    autoGenerate: async (venueId) => {
+        const response = await apiClient.post(`/venues/${venueId}/seat-layouts/auto-generate`);
+        return response.data;
+    },
+
+    getStatistics: async (venueId) => {
+        const response = await apiClient.get(`/venues/${venueId}/seat-statistics`);
+        return response.data;
+    }
+};
+
 // 공연 API
 export const performanceAPI = {
     getAll: async () => {

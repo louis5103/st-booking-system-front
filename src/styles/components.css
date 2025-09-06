@@ -467,6 +467,56 @@
     color: #2c3e50;
 }
 
+/* 관리자 페이지 탭 스타일 */
+.admin-tabs {
+    display: flex;
+    margin-bottom: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 1rem 2rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #7f8c8d;
+    transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+    background-color: #f8f9fa;
+}
+
+.tab-button.active {
+    background-color: #3498db;
+    color: white;
+}
+
+.admin-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 2rem;
+}
+
+.admin-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-section-header h2 {
+    color: #2c3e50;
+    margin: 0;
+}
+
 .performance-form {
     padding: 1.5rem;
 }
@@ -484,7 +534,8 @@
     margin-top: 1rem;
 }
 
-.performances-section h2 {
+.performances-section h2,
+.performances-section h3 {
     margin-bottom: 1rem;
     color: #2c3e50;
 }
@@ -496,6 +547,276 @@
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* 공연장 관리 스타일 */
+.venue-management {
+    max-width: 100%;
+}
+
+.venue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.venue-header h2 {
+    color: #2c3e50;
+    margin: 0;
+}
+
+.venues-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.venue-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.venue-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.venue-info h4 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+.venue-location {
+    color: #6c757d;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.venue-description {
+    color: #495057;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.venue-stats {
+    margin-bottom: 1.5rem;
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.stat .label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat .value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.venue-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.venue-actions .btn {
+    flex: 1;
+    min-width: 80px;
+}
+
+.venue-form {
+    padding: 1.5rem;
+}
+
+.venue-form .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.no-venues {
+    text-align: center;
+    padding: 3rem;
+    color: #7f8c8d;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+/* 좌석 맵 표시 스타일 */
+.seat-map-display {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.seat-map-display h3 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.seat-map-info {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.seat-map-info p {
+    margin: 0;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.seat-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.seat-sample {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.seat-sample.vip {
+    background-color: #e74c3c;
+}
+
+.seat-sample.premium {
+    background-color: #f39c12;
+}
+
+.seat-sample.regular {
+    background-color: #3498db;
+}
+
+.seat-sample.aisle {
+    background-color: #95a5a6;
+}
+
+.seat-map-container {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.seats-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.seat.vip {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.seat.premium {
+    background-color: #f39c12;
+    color: white;
+}
+
+.seat.regular {
+    background-color: #3498db;
+    color: white;
+}
+
+.seat.aisle {
+    background-color: transparent;
+    border: none;
+    color: transparent;
+}
+
+.seat.blocked {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+.seat.inactive {
+    opacity: 0.5;
+    filter: grayscale(100%);
+}
+
+.seat:not(.aisle):hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.seat-map-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* 모달 스타일 개선 */
+.modal.large {
+    width: 90%;
+    max-width: 800px;
+}
+
+.modal.extra-large {
+    width: 95%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* 버튼 크기 변형 */
+.btn.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn.btn-info {
+    background-color: #17a2b8;
+    color: white;
+    border: 1px solid #17a2b8;
+}
+
+.btn.btn-info:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+}
+
+.btn.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+    border: 1px solid #ffc107;
+}
+
+.btn.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
 }
 
 /* 반응형 디자인 */
@@ -552,5 +873,46 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
+    }
+
+    .venues-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .venue-actions {
+        flex-direction: column;
+    }
+    
+    .venue-actions .btn {
+        flex: none;
+    }
+    
+    .seat-map-info {
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+    
+    .seat-legend {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .admin-tabs {
+        flex-direction: column;
+    }
+    
+    .modal.large,
+    .modal.extra-large {
+        width: 95%;
+        margin: 1rem;
+    }
+    
+    .venue-form .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .seat-map-actions {
+        flex-direction: column;
     }
 }
