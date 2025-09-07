@@ -100,21 +100,21 @@ export const venueAPI = {
     }
 };
 
-// 좌석 배치 API (리팩토링된 버전)
+// 좌석 배치 API (통합 및 개선된 버전)
 export const seatLayoutAPI = {
-    // 공연장 좌석 배치 조회
+    // 공연장 좌석 배치 조회 (통합 버전)
     getVenueLayout: async (venueId) => {
         const response = await apiClient.get(`/seat-layouts/venues/${venueId}`);
         return response.data;
     },
 
-    // 좌석 배치 저장
+    // 좌석 배치 저장 (통합 버전)
     saveVenueLayout: async (venueId, layoutData) => {
         const response = await apiClient.post(`/seat-layouts/venues/${venueId}`, layoutData);
         return response.data;
     },
 
-    // 템플릿 적용
+    // 템플릿 적용 (개선된 버전)
     applyTemplate: async (venueId, templateName, config = null) => {
         const response = await apiClient.post(`/seat-layouts/venues/${venueId}/templates/${templateName}`, config);
         return response.data;
@@ -138,6 +138,19 @@ export const seatLayoutAPI = {
         return response.data;
     },
 
+    // 좌석 배치 유효성 검사
+    validateSeatLayout: async (venueId, layoutData) => {
+        const response = await apiClient.post(`/seat-layouts/venues/${venueId}/validate`, layoutData);
+        return response.data;
+    },
+
+    // 템플릿 미리보기
+    getTemplatePreview: async (templateName, config = {}) => {
+        const params = new URLSearchParams(config).toString();
+        const response = await apiClient.get(`/seat-layouts/templates/${templateName}/preview?${params}`);
+        return response.data;
+    },
+
     // 레거시 API 호환성 (기존 코드들을 위해 유지)
     getByVenue: async (venueId) => {
         return await seatLayoutAPI.getVenueLayout(venueId);
@@ -148,7 +161,14 @@ export const seatLayoutAPI = {
     },
 
     getFlexibleSeatMap: async (venueId) => {
-        return await seatLayoutAPI.getVenueLayout(venueId);
+        const response = await apiClient.get(`/seat-layouts/venues/${venueId}/flexible`);
+        return response.data;
+    },
+
+    updateFlexibleLayout: async (layoutData) => {
+        const venueId = layoutData.venueId;
+        const response = await apiClient.post(`/seat-layouts/venues/${venueId}/flexible`, layoutData);
+        return response.data;
     },
 
     getStatistics: async (venueId) => {

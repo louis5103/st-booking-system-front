@@ -221,7 +221,7 @@ const VenueManagement = () => {
                             }}
                             className="btn btn-primary"
                         >
-                            자세한 편집하기
+                            🎭 개선된 에디터로 편집
                         </button>
                         <button
                             onClick={() => setShowSeatLayout(null)}
@@ -246,12 +246,12 @@ const VenueManagement = () => {
     return (
         <div className="venue-management">
             <div className="venue-header">
-                <h2>공연장 관리</h2>
+                <h2>🏛️ 공연장 관리</h2>
                 <button
                     onClick={handleAddVenue}
                     className="btn btn-primary"
                 >
-                    새 공연장 등록
+                    ➕ 새 공연장 등록
                 </button>
             </div>
 
@@ -276,6 +276,7 @@ const VenueManagement = () => {
                                         value={formData.name}
                                         onChange={handleInputChange}
                                         required
+                                        placeholder="예: 세종문화회관 대극장"
                                     />
                                 </div>
 
@@ -288,6 +289,7 @@ const VenueManagement = () => {
                                         value={formData.location}
                                         onChange={handleInputChange}
                                         required
+                                        placeholder="예: 서울특별시 종로구 세종대로 175"
                                     />
                                 </div>
                             </div>
@@ -302,7 +304,9 @@ const VenueManagement = () => {
                                         value={formData.totalSeats}
                                         onChange={handleInputChange}
                                         min="1"
+                                        max="5000"
                                         required
+                                        placeholder="예: 300"
                                     />
                                 </div>
 
@@ -317,6 +321,7 @@ const VenueManagement = () => {
                                         min="1"
                                         max="26"
                                         required
+                                        placeholder="예: 15"
                                     />
                                 </div>
 
@@ -331,6 +336,7 @@ const VenueManagement = () => {
                                         min="1"
                                         max="50"
                                         required
+                                        placeholder="예: 20"
                                     />
                                 </div>
                             </div>
@@ -344,7 +350,7 @@ const VenueManagement = () => {
                                         name="facilities"
                                         value={formData.facilities}
                                         onChange={handleInputChange}
-                                        placeholder="주차장, 레스토랑, 카페 등"
+                                        placeholder="주차장, 레스토랑, 카페, 휠체어석 등"
                                     />
                                 </div>
 
@@ -378,7 +384,7 @@ const VenueManagement = () => {
                                     취소
                                 </button>
                                 <button type="submit" className="btn btn-primary">
-                                    {editingVenue ? '수정' : '등록'}
+                                    {editingVenue ? '✅ 수정' : '✅ 등록'}
                                 </button>
                             </div>
                         </form>
@@ -408,15 +414,29 @@ const VenueManagement = () => {
                 <h3>등록된 공연장 목록</h3>
 
                 {venues.length === 0 ? (
-                    <div className="no-venues">등록된 공연장이 없습니다.</div>
+                    <div className="no-venues">
+                        <div className="empty-state">
+                            <div className="empty-icon">🏛️</div>
+                            <h4>등록된 공연장이 없습니다</h4>
+                            <p>새 공연장을 등록하여 시작해보세요!</p>
+                            <button
+                                onClick={handleAddVenue}
+                                className="btn btn-primary"
+                            >
+                                ➕ 첫 번째 공연장 등록
+                            </button>
+                        </div>
+                    </div>
                 ) : (
                     <div className="venues-grid">
                         {venues.map(venue => (
                             <div key={venue.id} className="venue-card">
                                 <div className="venue-info">
                                     <h4>{venue.name}</h4>
-                                    <p className="venue-location">{venue.location}</p>
-                                    <p className="venue-description">{venue.description}</p>
+                                    <p className="venue-location">📍 {venue.location}</p>
+                                    {venue.description && (
+                                        <p className="venue-description">{venue.description}</p>
+                                    )}
                                     
                                     <div className="venue-stats">
                                         <div className="stat">
@@ -446,26 +466,30 @@ const VenueManagement = () => {
                                     <button
                                         onClick={() => handleViewSeatLayout(venue)}
                                         className="btn btn-info btn-sm"
+                                        title="좌석 배치 미리보기"
                                     >
-                                        미리보기
+                                        👁️ 미리보기
                                     </button>
                                     <button
                                         onClick={() => handleOpenSeatEditor(venue)}
                                         className="btn btn-success btn-sm"
+                                        title="개선된 좌석 배치 에디터로 편집"
                                     >
-                                        좌석 배치 편집
+                                        🎭 좌석 편집
                                     </button>
                                     <button
                                         onClick={() => handleEditVenue(venue)}
                                         className="btn btn-warning btn-sm"
+                                        title="공연장 정보 수정"
                                     >
-                                        수정
+                                        ✏️ 수정
                                     </button>
                                     <button
                                         onClick={() => handleDeleteVenue(venue.id)}
                                         className="btn btn-danger btn-sm"
+                                        title="공연장 삭제"
                                     >
-                                        삭제
+                                        🗑️ 삭제
                                     </button>
                                 </div>
                             </div>
