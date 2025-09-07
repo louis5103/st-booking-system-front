@@ -1005,34 +1005,35 @@
 
 /* 좌석 배치 에디터 전용 모달 스타일 */
 .modal.fullscreen {
-    width: 100vw;
-    height: 100vh;
-    max-width: none;
-    max-height: none;
-    margin: 0;
-    border-radius: 0;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
-    overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  overflow: auto; /* hidden에서 auto로 변경 */
 }
 
 .modal.fullscreen .modal-header {
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-bottom: 2px solid #e9ecef;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    z-index: 10000;
-    position: relative;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 2px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 10000;
+  position: sticky; /* 스크롤시 헤더 고정 */
+  top: 0;
 }
 
 .modal.fullscreen .modal-body.fullscreen-body {
-    height: calc(100vh - 80px); /* 헤더 높이 제외 */
-    overflow: hidden;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
+  height: calc(100vh - 80px); /* 헤더 높이 제외 */
+  overflow: auto; /* 스크롤 가능 */
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal.fullscreen .close-button {
@@ -1055,12 +1056,13 @@
 
 /* 좌석 에디터 컴포넌트가 모달 내에서 전체 공간을 활용하도록 */
 .modal.fullscreen .seat-layout-editor {
-    position: static;
-    background: transparent;
-    font-family: inherit;
-    height: 100%;
-    overflow: hidden;
-    animation: none;
+  position: static;
+  background: transparent;
+  font-family: inherit;
+  height: 100%;
+  overflow: visible; /* auto에서 visible로 변경 */
+  animation: none;
+  padding: 0; /* 중복 패딩 제거 */
 }
 
 /* 템플릿 버튼 스타일 개선 */
