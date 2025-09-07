@@ -232,11 +232,13 @@
   font-weight: 600;
   color: #2c3e50;
   font-size: 0.9rem;
-  /* 텍스트 오버플로우 처리 */
+  /* 텍스트 오버플로우 처리 강화 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 90px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .section-count {
@@ -306,6 +308,29 @@
   transform: translateY(-1px);
 }
 
+/* 정렬 도구 개선 */
+.alignment-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.align-section {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  padding: 0.75rem;
+  border: 1px solid #e9ecef;
+}
+
+.align-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6c757d;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
 /* 정렬 버튼들 */
 .align-buttons {
   display: grid;
@@ -316,6 +341,20 @@
 
 .align-buttons:last-child {
   grid-template-columns: repeat(2, 1fr);
+}
+
+/* 그룹 편집에서 정렬 버튼들을 더 눈에 띄게 */
+.group-edit .align-buttons .btn {
+  font-weight: 700;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.group-edit .align-buttons .btn:hover {
+  border-color: currentColor;
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .button-group {
@@ -413,11 +452,13 @@
 }
 
 .stat-name {
-  /* 통계 이름에도 오버플로우 처리 */
+  /* 통계 이름에도 오버플로우 처리 강화 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100px;
+  max-width: 90px;
+  min-width: 0;
+  flex-shrink: 1;
   margin-right: 0.5rem;
 }
 
@@ -513,15 +554,15 @@
 
 /* 좌석 호버 효과를 최소화하여 진동 방지 */
 .seat.draggable:hover {
-  opacity: 0.9;
-  transform: scale(1.02); /* 1.1에서 1.02로 줄임 */
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  opacity: 0.95;
+  transform: scale(1.02); /* 매우 미세한 스케일 변화 */
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
 }
 
 .seat.selectable:hover {
-  opacity: 0.9;
+  opacity: 0.95;
   stroke-width: 4px;
-  transform: scale(1.02); /* 진동 방지를 위해 줄임 */
+  /* transform 제거하여 진동 완전 방지 */
 }
 
 .seat.view-only {
@@ -1092,4 +1133,75 @@
     border-radius: 0;
     box-shadow: none;
   }
+}
+
+/* =========================
+   추가 개선사항들
+   ========================= */
+
+/* 터치 디바이스에서 좌석 클릭 더 쉽게 */
+@media (hover: none) and (pointer: coarse) {
+  .seat {
+    r: 24 !important; /* 터치에서 좌석 더 크게 */
+    transform-origin: center;
+  }
+  
+  .control-btn {
+    r: 15 !important; /* 컨트롤 버튼도 더 크게 */
+  }
+  
+  .btn {
+    padding: 1rem 1.5rem !important;
+    font-size: 1rem !important;
+    min-height: 48px; /* 터치 최소 크기 */
+  }
+  
+  .btn-xs {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    min-height: 42px;
+  }
+  
+  .btn-sm {
+    padding: 0.875rem 1.25rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px;
+  }
+}
+
+/* 좌석 진동 완전 방지를 위한 추가 CSS */
+.seat.selectable {
+  transition: opacity 0.2s ease, stroke-width 0.2s ease;
+}
+
+.seat.selectable:hover {
+  /* transform 완전 제거로 진동 방지 */
+  transform: none !important;
+}
+
+/* 정렬 도구를 더 시각적으로 강조 */
+.group-edit .alignment-tools {
+  background: linear-gradient(135deg, rgba(255,193,7,0.1) 0%, rgba(255,193,7,0.05) 100%);
+  border: 2px dashed #ffc107;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* 드래그 선택 영역을 더 명확하게 */
+rect[stroke="#007bff"] {
+  stroke-width: 3 !important;
+  stroke-dasharray: 8,4 !important;
+  filter: drop-shadow(0 2px 8px rgba(0,123,255,0.3));
+}
+
+/* 선택된 좌석의 링 애니메이션 개선 */
+.selection-ring {
+  animation: rotateRing 3s linear infinite;
+  filter: drop-shadow(0 0 4px #ff6600);
+}
+
+@keyframes rotateRing {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

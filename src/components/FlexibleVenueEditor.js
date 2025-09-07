@@ -364,20 +364,13 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
   const handleMouseDown = useCallback((e, seat) => {
     if (viewMode === 'preview' || isPanning) return;
     
+    e.stopPropagation();
+    
     if (groupMode) {
-      // 그룹 모드에서는 드래그 선택 시작
-      if (e.button === 0 && !e.shiftKey) { // 좌클릭이고 Shift 키를 누르지 않았을 때
-        const pos = getMousePosition(e);
-        setIsDragSelecting(true);
-        setDragSelectStart(pos);
-        setDragSelectEnd(pos);
-        setDragSelectRect({ x: pos.x, y: pos.y, width: 0, height: 0 });
-        e.stopPropagation();
-        return;
-      }
+      // 그룹 모드에서는 좌석 클릭으로 선택/해제만
+      handleSeatClick(seat, e);
     } else {
       // 편집 모드에서는 좌석 드래그 시작
-      e.stopPropagation();
       const pos = getMousePosition(e);
       setDraggedSeat({ 
         ...seat, 
@@ -385,7 +378,7 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
         offsetY: pos.y - seat.y 
       });
     }
-  }, [viewMode, groupMode, isPanning, getMousePosition]);
+  }, [viewMode, groupMode, isPanning, getMousePosition, handleSeatClick]);
 
   const handleStageMouseDown = useCallback((e) => {
     if (viewMode === 'preview' || !isStageMovable) return;
@@ -487,12 +480,13 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
       setIsPanning(true);
       setLastPanPoint({ x: e.clientX, y: e.clientY });
     } else if (groupMode && e.button === 0 && !e.altKey) {
-      // 그룹 모드에서 드래그 선택 시작
+      // 그룹 모드에서 빈 공간을 드래그하여 영역 선택 시작
       const pos = getMousePosition(e);
       setIsDragSelecting(true);
       setDragSelectStart(pos);
       setDragSelectEnd(pos);
       setDragSelectRect({ x: pos.x, y: pos.y, width: 0, height: 0 });
+      e.preventDefault(); // 기본 동작 방지
     }
   }, [groupMode, getMousePosition]);
 
@@ -1023,47 +1017,55 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
                   </select>
                 </div>
                 
-                {/* 정렬 기능 */}
+                {/* 정렬 기능 - 개선된 UI */}
                 <div className="form-group">
-                  <label>정렬</label>
-                  <div className="align-buttons">
-                    <button
-                      onClick={() => alignSelectedSeats('horizontal')}
-                      className="btn btn-xs btn-info"
-                      title="수평 정렬"
-                    >
-                      ↔️ 수평
-                    </button>
-                    <button
-                      onClick={() => alignSelectedSeats('vertical')}
-                      className="btn btn-xs btn-info"
-                      title="수직 정렬"
-                    >
-                      ↕️ 수직
-                    </button>
-                    <button
-                      onClick={() => alignSelectedSeats('grid')}
-                      className="btn btn-xs btn-success"
-                      title="격자 정렬"
-                    >
-                      📐 격자
-                    </button>
-                  </div>
-                  <div className="align-buttons">
-                    <button
-                      onClick={() => alignSelectedSeats('distribute-horizontal')}
-                      className="btn btn-xs btn-secondary"
-                      title="수평 균등 분배"
-                    >
-                      🔗 수평분배
-                    </button>
-                    <button
-                      onClick={() => alignSelectedSeats('distribute-vertical')}
-                      className="btn btn-xs btn-secondary"
-                      title="수직 균등 분배"
-                    >
-                      🔗 수직분배
-                    </button>
+                  <label>📐 좌석 정렬 도구</label>
+                  <div className="alignment-tools">
+                    <div className="align-section">
+                      <span className="align-section-title">기본 정렬</span>
+                      <div className="align-buttons">
+                        <button
+                          onClick={() => alignSelectedSeats('horizontal')}
+                          className="btn btn-xs btn-info"
+                          title="선택된 좌석들을 같은 높이로 수평 정렬"
+                        >
+                          ↔️ 수평
+                        </button>
+                        <button
+                          onClick={() => alignSelectedSeats('vertical')}
+                          className="btn btn-xs btn-info"
+                          title="선택된 좌석들을 같은 위치로 수직 정렬"
+                        >
+                          ↕️ 수직
+                        </button>
+                        <button
+                          onClick={() => alignSelectedSeats('grid')}
+                          className="btn btn-xs btn-success"
+                          title="20px 단위로 격자에 정확히 정렬"
+                        >
+                          📐 격자
+                        </button>
+                      </div>
+                    </div>
+                    <div className="align-section">
+                      <span className="align-section-title">균등 분배</span>
+                      <div className="align-buttons">
+                        <button
+                          onClick={() => alignSelectedSeats('distribute-horizontal')}
+                          className="btn btn-xs btn-warning"
+                          title="좌석들을 수평으로 균등 분배"
+                        >
+                          🔗 수평분배
+                        </button>
+                        <button
+                          onClick={() => alignSelectedSeats('distribute-vertical')}
+                          className="btn btn-xs btn-warning"
+                          title="좌석들을 수직으로 균등 분배"
+                        >
+                          🔗 수직분배
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
@@ -1315,7 +1317,7 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
                     <circle
                       cx={seat.x + 20}
                       cy={seat.y + 20}
-                      r="18"
+                      r="20"
                       fill={seatTypes[seat.seatType]?.color || '#3B82F6'}
                       stroke="#fff"
                       strokeWidth="3"

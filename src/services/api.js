@@ -100,77 +100,59 @@ export const venueAPI = {
     }
 };
 
-// 좌석 배치 API
+// 좌석 배치 API (리팩토링된 버전)
 export const seatLayoutAPI = {
-    getByVenue: async (venueId) => {
-        const response = await apiClient.get(`/venues/${venueId}/seat-layouts`);
+    // 공연장 좌석 배치 조회
+    getVenueLayout: async (venueId) => {
+        const response = await apiClient.get(`/seat-layouts/venues/${venueId}`);
         return response.data;
     },
 
-    getActiveByVenue: async (venueId) => {
-        const response = await apiClient.get(`/venues/${venueId}/seat-layouts/active`);
+    // 좌석 배치 저장
+    saveVenueLayout: async (venueId, layoutData) => {
+        const response = await apiClient.post(`/seat-layouts/venues/${venueId}`, layoutData);
         return response.data;
+    },
+
+    // 템플릿 적용
+    applyTemplate: async (venueId, templateName, config = null) => {
+        const response = await apiClient.post(`/seat-layouts/venues/${venueId}/templates/${templateName}`, config);
+        return response.data;
+    },
+
+    // 좌석 배치 초기화
+    clearVenueLayout: async (venueId) => {
+        const response = await apiClient.delete(`/seat-layouts/venues/${venueId}`);
+        return response.data;
+    },
+
+    // 사용 가능한 템플릿 목록 조회
+    getAvailableTemplates: async () => {
+        const response = await apiClient.get('/seat-layouts/templates');
+        return response.data;
+    },
+
+    // 좌석 배치 통계 조회
+    getVenueStatistics: async (venueId) => {
+        const response = await apiClient.get(`/seat-layouts/venues/${venueId}/statistics`);
+        return response.data;
+    },
+
+    // 레거시 API 호환성 (기존 코드들을 위해 유지)
+    getByVenue: async (venueId) => {
+        return await seatLayoutAPI.getVenueLayout(venueId);
     },
 
     getSeatMap: async (venueId) => {
-        const response = await apiClient.get(`/venues/${venueId}/seat-map`);
-        return response.data;
+        return await seatLayoutAPI.getVenueLayout(venueId);
     },
 
-    create: async (seatLayoutData) => {
-        const response = await apiClient.post('/seat-layouts', seatLayoutData);
-        return response.data;
-    },
-
-    createBulk: async (bulkData) => {
-        const response = await apiClient.post('/seat-layouts/bulk', bulkData);
-        return response.data;
-    },
-
-    update: async (id, seatLayoutData) => {
-        const response = await apiClient.put(`/seat-layouts/${id}`, seatLayoutData);
-        return response.data;
-    },
-
-    delete: async (id) => {
-        const response = await apiClient.delete(`/seat-layouts/${id}`);
-        return response.data;
-    },
-
-    deleteAllForVenue: async (venueId) => {
-        const response = await apiClient.delete(`/venues/${venueId}/seat-layouts`);
-        return response.data;
-    },
-
-    autoGenerate: async (venueId) => {
-        const response = await apiClient.post(`/venues/${venueId}/seat-layouts/auto-generate`);
-        return response.data;
+    getFlexibleSeatMap: async (venueId) => {
+        return await seatLayoutAPI.getVenueLayout(venueId);
     },
 
     getStatistics: async (venueId) => {
-        const response = await apiClient.get(`/venues/${venueId}/seat-statistics`);
-        return response.data;
-    },
-
-    // 유연한 좌석 배치 관련 API
-    getFlexibleSeatMap: async (venueId) => {
-        const response = await apiClient.get(`/venues/${venueId}/flexible-seat-map`);
-        return response.data;
-    },
-
-    updateSectionGroup: async (sectionGroupData) => {
-        const response = await apiClient.put('/seat-layouts/section-group', sectionGroupData);
-        return response.data;
-    },
-
-    updateFlexibleLayout: async (flexibleLayoutData) => {
-        const response = await apiClient.put('/seat-layouts/flexible-update', flexibleLayoutData);
-        return response.data;
-    },
-
-    getSections: async (venueId) => {
-        const response = await apiClient.get(`/venues/${venueId}/sections`);
-        return response.data;
+        return await seatLayoutAPI.getVenueStatistics(venueId);
     }
 };
 
@@ -206,6 +188,12 @@ export const performanceAPI = {
 export const seatAPI = {
     getByPerformance: async (performanceId) => {
         const response = await apiClient.get(`/performances/${performanceId}/seats`);
+        return response.data;
+    },
+
+    // 공연별 좌석 가용성 조회
+    getAvailability: async (performanceId) => {
+        const response = await apiClient.get(`/performances/${performanceId}/seats/availability`);
         return response.data;
     }
 };

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { venueAPI, seatLayoutAPI } from '../services/api';
+import '../styles/SeatLayoutEditor.css';
 
 // 좌석 타입 정의
 const SEAT_TYPES = {
@@ -511,27 +512,9 @@ const SeatLayoutEditor = ({ venueId, onClose }) => {
   }
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0, 
-      backgroundColor: '#F8F9FA', 
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+    <div className="seat-layout-editor">
       {/* 헤더 */}
-      <div style={{
-        padding: '1rem 2rem',
-        backgroundColor: 'white',
-        borderBottom: '2px solid #E9ECEF',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
+      <div className="header">
         <div>
           <h2 style={{ margin: 0, color: '#2C3E50' }}>🎭 좌석 배치 에디터</h2>
           <p style={{ margin: '0.25rem 0 0 0', color: '#6C757D', fontSize: '0.875rem' }}>

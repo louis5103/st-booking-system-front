@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { venueAPI, seatLayoutAPI } from '../services/api';
-import FlexibleVenueEditor from './FlexibleVenueEditor';
+import SeatLayoutEditor from './SeatLayoutEditor';
 
 const VenueManagement = () => {
     const [venues, setVenues] = useState([]);
@@ -9,7 +9,7 @@ const VenueManagement = () => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingVenue, setEditingVenue] = useState(null);
     const [showSeatLayout, setShowSeatLayout] = useState(null);
-    const [showFlexibleEditor, setShowFlexibleEditor] = useState(null);
+    const [showSeatEditor, setShowSeatEditor] = useState(null);
     const [seatMap, setSeatMap] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
@@ -129,8 +129,8 @@ const VenueManagement = () => {
 
     const handleViewSeatLayout = async (venue) => {
         try {
-            const seatMapData = await seatLayoutAPI.getSeatMap(venue.id);
-            setSeatMap(seatMapData);
+            const layoutData = await seatLayoutAPI.getVenueLayout(venue.id);
+            setSeatMap(layoutData);
             setShowSeatLayout(venue);
         } catch (error) {
             console.error('Error fetching seat layout:', error);
@@ -138,28 +138,28 @@ const VenueManagement = () => {
         }
     };
 
-    const handleAutoGenerateSeats = async (venueId) => {
-        if (!window.confirm('이 공연장의 기본 좌석 배치를 자동 생성하시겠습니까? 기존 좌석 배치는 삭제됩니다.')) {
+    const handleApplyTemplate = async (venueId, templateName) => {
+        if (!window.confirm(`${templateName} 템플릿을 적용하시겠습니까? 기존 좌석 배치는 삭제됩니다.`)) {
             return;
         }
 
         try {
-            await seatLayoutAPI.autoGenerate(venueId);
-            alert('좌석 배치가 자동 생성되었습니다.');
+            await seatLayoutAPI.applyTemplate(venueId, templateName);
+            alert('템플릿이 적용되었습니다.');
             
             // 좌석 맵 다시 로드
             if (showSeatLayout && showSeatLayout.id === venueId) {
-                const seatMapData = await seatLayoutAPI.getSeatMap(venueId);
-                setSeatMap(seatMapData);
+                const layoutData = await seatLayoutAPI.getVenueLayout(venueId);
+                setSeatMap(layoutData);
             }
         } catch (error) {
-            console.error('Error auto-generating seats:', error);
-            alert('좌석 배치 자동 생성 중 오류가 발생했습니다.');
+            console.error('Error applying template:', error);
+            alert('템플릿 적용 중 오류가 발생했습니다.');
         }
     };
 
-    const handleOpenFlexibleEditor = (venue) => {
-        setShowFlexibleEditor(venue);
+    const handleOpenSeatEditor = (venue) => {
+        setShowSeatEditor(venue);
     };
 
     const renderSeatMap = () => {
@@ -167,68 +167,69 @@ const VenueManagement = () => {
 
         return (
             <div className="seat-map-display">
-                <h3>{seatMap.venueName} 좌석 배치</h3>
+                <h3>{seatMap.venueName || showSeatLayout.name} 좌석 배치</h3>
                 <div className="seat-map-info">
-                    <p>총 행 수: {seatMap.totalRows}행</p>
-                    <p>행당 좌석 수: {seatMap.seatsPerRow}석</p>
                     <p>총 좌석 수: {seatMap.statistics?.totalSeats || 0}석</p>
-                    <p>예매 가능 좌석: {seatMap.statistics?.bookableSeats || 0}석</p>
-                </div>
-
-                <div className="seat-legend">
-                    <div className="legend-item">
-                        <span className="seat-sample vip"></span>
-                        <span>VIP석</span>
-                    </div>
-                    <div className="legend-item">
-                        <span className="seat-sample premium"></span>
-                        <span>프리미엄석</span>
-                    </div>
-                    <div className="legend-item">
-                        <span className="seat-sample regular"></span>
-                        <span>일반석</span>
-                    </div>
-                    <div className="legend-item">
-                        <span className="seat-sample aisle"></span>
-                        <span>통로</span>
-                    </div>
+                    <p>활성 좌석: {seatMap.statistics?.activeSeats || 0}석</p>
+                    {seatMap.statistics?.totalRevenue && (
+                        <p>예상 수익: {seatMap.statistics.totalRevenue.toLocaleString()}원</p>
+                    )}
                 </div>
 
                 <div className="seat-map-container">
                     <div className="stage">무대</div>
-                    <div className="seats-grid">
-                        {seatMap.seatMatrix.map((row, rowIndex) => (
-                            <div key={rowIndex} className="seat-row">
-                                <div className="row-label">{String.fromCharCode(65 + rowIndex)}</div>
-                                <div className="seats">
-                                    {row.map((seat, seatIndex) => (
-                                        <div
-                                            key={`${rowIndex}-${seatIndex}`}
-                                            className={`seat ${seat.seatType.toLowerCase()} ${seat.isActive ? 'active' : 'inactive'}`}
-                                            title={`${seat.seatLabel} (${seat.seatType})`}
-                                        >
-                                            {seat.seatType === 'AISLE' ? '' : seat.seatNumber}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="seat-preview">
+                        좌석 배치 미리보기 (좌석 {seatMap.seats?.length || 0}개)
+                        <br />
+                        <small>자세한 편집은 "좌석 배치 편집" 버튼을 이용하세요</small>
                     </div>
                 </div>
 
                 <div className="seat-map-actions">
-                    <button
-                        onClick={() => handleAutoGenerateSeats(showSeatLayout.id)}
-                        className="btn btn-warning"
-                    >
-                        좌석 배치 재생성
-                    </button>
-                    <button
-                        onClick={() => setShowSeatLayout(null)}
-                        className="btn btn-secondary"
-                    >
-                        닫기
-                    </button>
+                    <h4>빠른 템플릿 적용</h4>
+                    <div className="template-buttons">
+                        <button
+                            onClick={() => handleApplyTemplate(showSeatLayout.id, 'small_theater')}
+                            className="btn btn-info"
+                        >
+                            소형 극장 (10행 8열)
+                        </button>
+                        <button
+                            onClick={() => handleApplyTemplate(showSeatLayout.id, 'medium_theater')}
+                            className="btn btn-info"
+                        >
+                            중형 극장 (15행 12열)
+                        </button>
+                        <button
+                            onClick={() => handleApplyTemplate(showSeatLayout.id, 'large_theater')}
+                            className="btn btn-info"
+                        >
+                            대형 극장 (20행 16열)
+                        </button>
+                        <button
+                            onClick={() => handleApplyTemplate(showSeatLayout.id, 'concert_hall')}
+                            className="btn btn-info"
+                        >
+                            콘서트홀 (25행 20열)
+                        </button>
+                    </div>
+                    <div className="modal-actions">
+                        <button
+                            onClick={() => {
+                                setShowSeatLayout(null);
+                                handleOpenSeatEditor(showSeatLayout);
+                            }}
+                            className="btn btn-primary"
+                        >
+                            자세한 편집하기
+                        </button>
+                        <button
+                            onClick={() => setShowSeatLayout(null)}
+                            className="btn btn-secondary"
+                        >
+                            닫기
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -396,10 +397,10 @@ const VenueManagement = () => {
                 </div>
             )}
 
-            {showFlexibleEditor && (
-                <FlexibleVenueEditor 
-                    venueId={showFlexibleEditor.id}
-                    onClose={() => setShowFlexibleEditor(null)}
+            {showSeatEditor && (
+                <SeatLayoutEditor 
+                    venueId={showSeatEditor.id}
+                    onClose={() => setShowSeatEditor(null)}
                 />
             )}
 
@@ -446,13 +447,13 @@ const VenueManagement = () => {
                                         onClick={() => handleViewSeatLayout(venue)}
                                         className="btn btn-info btn-sm"
                                     >
-                                        기본 배치 보기
+                                        미리보기
                                     </button>
                                     <button
-                                        onClick={() => handleOpenFlexibleEditor(venue)}
+                                        onClick={() => handleOpenSeatEditor(venue)}
                                         className="btn btn-success btn-sm"
                                     >
-                                        유연한 편집
+                                        좌석 배치 편집
                                     </button>
                                     <button
                                         onClick={() => handleEditVenue(venue)}
