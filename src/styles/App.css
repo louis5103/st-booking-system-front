@@ -34,6 +34,24 @@
   font-size: 1.1rem;
 }
 
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  width: 100%;
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  width: 100%;
+  gap: 1rem;
+}
+
 .error-message {
   background-color: #f8d7da;
   color: #721c24;

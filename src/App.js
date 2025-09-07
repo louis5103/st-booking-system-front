@@ -9,7 +9,6 @@ import BookingPage from './pages/BookingPage';
 import AdminPage from './pages/AdminPage';
 import MyBookingsPage from './pages/MyBookingsPage';
 import { isAuthenticated, getUserRole } from './services/auth';
-import './styles/App.css';
 
 function App() {
   const [user, setUser] = useState(null);

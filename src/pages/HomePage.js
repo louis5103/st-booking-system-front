@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PerformanceCard from '../components/PerformanceCard';
 import { performanceAPI } from '../services/api';
-import '../styles/components.css';
 
 const HomePage = () => {
     const [performances, setPerformances] = useState([]);
