@@ -150,6 +150,27 @@ export const seatLayoutAPI = {
     getStatistics: async (venueId) => {
         const response = await apiClient.get(`/venues/${venueId}/seat-statistics`);
         return response.data;
+    },
+
+    // 유연한 좌석 배치 관련 API
+    getFlexibleSeatMap: async (venueId) => {
+        const response = await apiClient.get(`/venues/${venueId}/flexible-seat-map`);
+        return response.data;
+    },
+
+    updateSectionGroup: async (sectionGroupData) => {
+        const response = await apiClient.put('/seat-layouts/section-group', sectionGroupData);
+        return response.data;
+    },
+
+    updateFlexibleLayout: async (flexibleLayoutData) => {
+        const response = await apiClient.put('/seat-layouts/flexible-update', flexibleLayoutData);
+        return response.data;
+    },
+
+    getSections: async (venueId) => {
+        const response = await apiClient.get(`/venues/${venueId}/sections`);
+        return response.data;
     }
 };
 

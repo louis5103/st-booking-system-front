@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { venueAPI, seatLayoutAPI } from '../services/api';
+import FlexibleVenueEditor from './FlexibleVenueEditor';
 
 const VenueManagement = () => {
     const [venues, setVenues] = useState([]);
@@ -8,6 +9,7 @@ const VenueManagement = () => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingVenue, setEditingVenue] = useState(null);
     const [showSeatLayout, setShowSeatLayout] = useState(null);
+    const [showFlexibleEditor, setShowFlexibleEditor] = useState(null);
     const [seatMap, setSeatMap] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
@@ -154,6 +156,10 @@ const VenueManagement = () => {
             console.error('Error auto-generating seats:', error);
             alert('좌석 배치 자동 생성 중 오류가 발생했습니다.');
         }
+    };
+
+    const handleOpenFlexibleEditor = (venue) => {
+        setShowFlexibleEditor(venue);
     };
 
     const renderSeatMap = () => {
@@ -390,6 +396,13 @@ const VenueManagement = () => {
                 </div>
             )}
 
+            {showFlexibleEditor && (
+                <FlexibleVenueEditor 
+                    venueId={showFlexibleEditor.id}
+                    onClose={() => setShowFlexibleEditor(null)}
+                />
+            )}
+
             <div className="venues-section">
                 <h3>등록된 공연장 목록</h3>
 
@@ -433,7 +446,13 @@ const VenueManagement = () => {
                                         onClick={() => handleViewSeatLayout(venue)}
                                         className="btn btn-info btn-sm"
                                     >
-                                        좌석 배치 보기
+                                        기본 배치 보기
+                                    </button>
+                                    <button
+                                        onClick={() => handleOpenFlexibleEditor(venue)}
+                                        className="btn btn-success btn-sm"
+                                    >
+                                        유연한 편집
                                     </button>
                                     <button
                                         onClick={() => handleEditVenue(venue)}
