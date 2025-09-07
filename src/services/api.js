@@ -104,20 +104,62 @@ export const venueAPI = {
 export const seatLayoutAPI = {
     // 공연장 좌석 배치 조회 (통합 버전)
     getVenueLayout: async (venueId) => {
-        const response = await apiClient.get(`/seat-layouts/venues/${venueId}`);
-        return response.data;
+        try {
+            const response = await apiClient.get(`/seat-layouts/venues/${venueId}`);
+            return {
+                success: true,
+                data: response.data
+            };
+        } catch (error) {
+            console.error('좌석 배치 조회 실패:', error);
+            return {
+                success: false,
+                error: error.response?.data?.message || '좌석 배치 조회에 실패했습니다.'
+            };
+        }
     },
 
     // 좌석 배치 저장 (통합 버전)
     saveVenueLayout: async (venueId, layoutData) => {
-        const response = await apiClient.post(`/seat-layouts/venues/${venueId}`, layoutData);
-        return response.data;
+        try {
+            const response = await apiClient.post(`/seat-layouts/venues/${venueId}`, layoutData);
+            return {
+                success: true,
+                data: response.data
+            };
+        } catch (error) {
+            console.error('좌석 배치 저장 실패:', error);
+            return {
+                success: false,
+                error: error.response?.data?.message || '좌석 배치 저장에 실패했습니다.'
+            };
+        }
+    },
+
+    // 새로운 에디터와 호환되는 API 래퍼
+    getSeatLayout: async (venueId) => {
+        return await seatLayoutAPI.getVenueLayout(venueId);
+    },
+
+    saveSeatLayout: async (venueId, layoutData) => {
+        return await seatLayoutAPI.saveVenueLayout(venueId, layoutData);
     },
 
     // 템플릿 적용 (개선된 버전)
     applyTemplate: async (venueId, templateName, config = null) => {
-        const response = await apiClient.post(`/seat-layouts/venues/${venueId}/templates/${templateName}`, config);
-        return response.data;
+        try {
+            const response = await apiClient.post(`/seat-layouts/venues/${venueId}/templates/${templateName}`, config);
+            return {
+                success: true,
+                data: response.data
+            };
+        } catch (error) {
+            console.error('템플릿 적용 실패:', error);
+            return {
+                success: false,
+                error: error.response?.data?.message || '템플릿 적용에 실패했습니다.'
+            };
+        }
     },
 
     // 좌석 배치 초기화

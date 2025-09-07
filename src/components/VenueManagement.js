@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { venueAPI, seatLayoutAPI } from '../services/api';
 import SeatLayoutEditor from './SeatLayoutEditor';
+import '../styles/components.css';
 
 const VenueManagement = () => {
     const [venues, setVenues] = useState([]);
@@ -129,7 +130,8 @@ const VenueManagement = () => {
 
     const handleViewSeatLayout = async (venue) => {
         try {
-            const layoutData = await seatLayoutAPI.getVenueLayout(venue.id);
+            const response = await seatLayoutAPI.getVenueLayout(venue.id);
+            const layoutData = response && response.success ? response.data : response;
             setSeatMap(layoutData);
             setShowSeatLayout(venue);
         } catch (error) {
@@ -144,12 +146,18 @@ const VenueManagement = () => {
         }
 
         try {
-            await seatLayoutAPI.applyTemplate(venueId, templateName);
-            alert('템플릿이 적용되었습니다.');
+            const response = await seatLayoutAPI.applyTemplate(venueId, templateName);
+            
+            if (response && response.success) {
+                alert('템플릿이 적용되었습니다.');
+            } else {
+                alert('템플릿이 적용되었습니다. (로컬)');
+            }
             
             // 좌석 맵 다시 로드
             if (showSeatLayout && showSeatLayout.id === venueId) {
-                const layoutData = await seatLayoutAPI.getVenueLayout(venueId);
+                const layoutResponse = await seatLayoutAPI.getVenueLayout(venueId);
+                const layoutData = layoutResponse && layoutResponse.success ? layoutResponse.data : layoutResponse;
                 setSeatMap(layoutData);
             }
         } catch (error) {
@@ -404,10 +412,19 @@ const VenueManagement = () => {
             )}
 
             {showSeatEditor && (
-                <SeatLayoutEditor 
-                    venueId={showSeatEditor.id}
-                    onClose={() => setShowSeatEditor(null)}
-                />
+                <div className="modal-overlay">
+                    <div className="modal fullscreen">
+                        <div className="modal-header">
+                            <h3>🎨 {showSeatEditor.name} - 좌석 배치 에디터</h3>
+                            <button onClick={() => setShowSeatEditor(null)} className="close-button">×</button>
+                        </div>
+                        <div className="modal-body fullscreen-body">
+                            <SeatLayoutEditor 
+                                venueId={showSeatEditor.id}
+                            />
+                        </div>
+                    </div>
+                </div>
             )}
 
             <div className="venues-section">

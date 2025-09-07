@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SeatMap from '../components/SeatMap';
 import { performanceAPI, seatAPI, bookingAPI, seatLayoutAPI } from '../services/api';
+import '../styles/components.css';
 
 const BookingPage = () => {
     const { performanceId } = useParams();

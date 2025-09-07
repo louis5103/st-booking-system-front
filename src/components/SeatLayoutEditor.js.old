@@ -1,0 +1,35 @@
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { venueAPI, seatLayoutAPI } from '../services/api';
+import '../styles/SeatLayoutEditor.css';
+
+// 좌석 타입 정의
+const SEAT_TYPES = {
+  REGULAR: { color: '#3B82F6', name: '일반석', price: 50000, icon: '💺' },
+  VIP: { color: '#F59E0B', name: 'VIP석', price: 100000, icon: '👑' },
+  PREMIUM: { color: '#8B5CF6', name: '프리미엄석', price: 75000, icon: '⭐' },
+  WHEELCHAIR: { color: '#10B981', name: '휠체어석', price: 50000, icon: '♿' },
+  BLOCKED: { color: '#6B7280', name: '막힌 좌석', price: 0, icon: '❌' }
+};
+
+// 편집 도구
+const EDIT_TOOLS = {
+  SELECT: 'select',
+  ADD_SEAT: 'add_seat', 
+  DELETE: 'delete',
+  MOVE: 'move',
+  SECTION: 'section'
+};
+
+// 템플릿 목록
+const TEMPLATES = {
+  THEATER: { name: '극장형', rows: 20, cols: 30, aisles: true },
+  CONCERT: { name: '콘서트홀', rows: 15, cols: 40, aisles: true },
+  CLASSROOM: { name: '강의실', rows: 10, cols: 20, aisles: false },
+  STADIUM: { name: '스타디움', rows: 50, cols: 60, aisles: true }
+};
+
+const SeatLayoutEditor = ({ venueId = 1 }) => {
+  // ... 기존 코드 (백업 목적)
+};
+
+export default SeatLayoutEditor;

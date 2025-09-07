@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PerformanceCard from '../components/PerformanceCard';
 import VenueManagement from '../components/VenueManagement';
 import { performanceAPI, venueAPI } from '../services/api';
+import '../styles/components.css';
 
 const AdminPage = () => {
     const [activeTab, setActiveTab] = useState('performances');

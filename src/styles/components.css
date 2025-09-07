@@ -819,6 +819,136 @@
     border-color: #d39e00;
 }
 
+/* 좌석 배치 에디터 전용 모달 스타일 */
+.modal.fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.modal.fullscreen .modal-header {
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-bottom: 2px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 10000;
+    position: relative;
+}
+
+.modal.fullscreen .modal-body.fullscreen-body {
+    height: calc(100vh - 80px); /* 헤더 높이 제외 */
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal.fullscreen .close-button {
+    width: 40px;
+    height: 40px;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    color: #6c757d;
+    transition: all 0.3s ease;
+}
+
+.modal.fullscreen .close-button:hover {
+    background: #e9ecef;
+    color: #495057;
+    border-color: #adb5bd;
+    transform: scale(1.1);
+}
+
+/* 좌석 에디터 컴포넌트가 모달 내에서 전체 공간을 활용하도록 */
+.modal.fullscreen .seat-layout-editor {
+    position: static;
+    background: transparent;
+    font-family: inherit;
+    height: 100%;
+    overflow: hidden;
+    animation: none;
+}
+
+/* 템플릿 버튼 스타일 개선 */
+.template-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.template-buttons .btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* 좌석 미리보기 개선 */
+.seat-preview {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    margin: 1rem 0;
+}
+
+.seat-preview small {
+    display: block;
+    margin-top: 0.5rem;
+    color: #adb5bd;
+}
+
+/* 모달 액션 버튼들 */
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.modal-actions .btn {
+    min-width: 120px;
+}
+
+/* 빈 상태 스타일 개선 */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h4 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+    color: #6c757d;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
     .hero-section h1 {

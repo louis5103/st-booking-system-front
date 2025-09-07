@@ -1,1 +1,1168 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';\nimport { venueAPI, seatLayoutAPI } from '../services/api';\nimport '../styles/SeatLayoutEditor.css';\n\n// 좌석 타입 정의\nconst SEAT_TYPES = {\n  REGULAR: { color: '#3B82F6', name: '일반석', price: 50000 },\n  VIP: { color: '#F59E0B', name: 'VIP석', price: 100000 },\n  PREMIUM: { color: '#8B5CF6', name: '프리미엄석', price: 75000 },\n  WHEELCHAIR: { color: '#10B981', name: '휠체어석', price: 50000 },\n  BLOCKED: { color: '#6B7280', name: '막힌 좌석', price: 0 }\n};\n\n// 섹션 색상 팔레트\nconst SECTION_COLORS = [\n  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', \n  '#FF8A80', '#82B1FF', '#B39DDB', '#A5D6A7', '#FFCC80'\n];\n\n// 개선된 좌석 배치 에디터 (격자 모드 + 자유 배치 모드 통합)\nconst SeatLayoutEditor = ({ venueId, onClose }) => {\n  // 상태 관리\n  const [editMode, setEditMode] = useState('grid'); // 'grid' 또는 'free'\n  const [currentTool, setCurrentTool] = useState('add'); // 'add', 'select', 'delete'\n  const [selectedSeatType, setSelectedSeatType] = useState('REGULAR');\n  const [seats, setSeats] = useState([]);\n  const [selectedSeats, setSelectedSeats] = useState([]);\n  const [loading, setLoading] = useState(false);\n  const [showGrid, setShowGrid] = useState(true);\n  const [gridSize] = useState(40);\n  const [canvasSize] = useState({ width: 800, height: 600 });\n  const [stage, setStage] = useState({ x: 200, y: 50, width: 200, height: 60 });\n  \n  // 섹션 관리\n  const [sections, setSections] = useState([\n    { id: 1, name: '1구역', color: '#FF6B6B', seatCount: 0 },\n    { id: 2, name: '2구역', color: '#4ECDC4', seatCount: 0 },\n    { id: 3, name: '3구역', color: '#45B7D1', seatCount: 0 }\n  ]);\n  const [selectedSection, setSelectedSection] = useState(1);\n  \n  // 드래그 및 상호작용 관련\n  const [draggedSeat, setDraggedSeat] = useState(null);\n  const [isDragSelecting, setIsDragSelecting] = useState(false);\n  const [dragSelectStart, setDragSelectStart] = useState({ x: 0, y: 0 });\n  const [dragSelectEnd, setDragSelectEnd] = useState({ x: 0, y: 0 });\n  const [dragSelectRect, setDragSelectRect] = useState(null);\n  \n  // 고급 기능들\n  const [history, setHistory] = useState([]);\n  const [historyIndex, setHistoryIndex] = useState(-1);\n  const [showTemplateModal, setShowTemplateModal] = useState(false);\n  const [templatePreviews, setTemplatePreviews] = useState([]);\n  const [validationErrors, setValidationErrors] = useState([]);\n  \n  const canvasRef = useRef(null);\n\n  // 키보드 단축키\n  useEffect(() => {\n    const handleKeyDown = (e) => {\n      if (e.ctrlKey || e.metaKey) {\n        switch (e.key) {\n          case 'z':\n            e.preventDefault();\n            if (e.shiftKey) {\n              redo();\n            } else {\n              undo();\n            }\n            break;\n          case 'y':\n            e.preventDefault();\n            redo();\n            break;\n          case 'a':\n            e.preventDefault();\n            selectAllSeats();\n            break;\n          case 's':\n            e.preventDefault();\n            saveLayout();\n            break;\n          case 'd':\n            e.preventDefault();\n            deleteSelectedSeats();\n            break;\n        }\n      }\n      \n      // 도구 단축키\n      switch (e.key) {\n        case '1':\n          setCurrentTool('add');\n          break;\n        case '2':\n          setCurrentTool('select');\n          break;\n        case '3':\n          setCurrentTool('delete');\n          break;\n        case 'g':\n          setShowGrid(!showGrid);\n          break;\n        case 'Escape':\n          setSelectedSeats([]);\n          setCurrentTool('select');\n          break;\n        case 'Delete':\n        case 'Backspace':\n          if (selectedSeats.length > 0) {\n            deleteSelectedSeats();\n          }\n          break;\n      }\n    };\n\n    window.addEventListener('keydown', handleKeyDown);\n    return () => window.removeEventListener('keydown', handleKeyDown);\n  }, [showGrid, selectedSeats]);\n\n  // 히스토리 관리\n  const saveToHistory = useCallback(() => {\n    const newState = {\n      seats: JSON.parse(JSON.stringify(seats)),\n      sections: JSON.parse(JSON.stringify(sections)),\n      stage: JSON.parse(JSON.stringify(stage))\n    };\n    \n    const newHistory = history.slice(0, historyIndex + 1);\n    newHistory.push(newState);\n    \n    if (newHistory.length > 50) {\n      newHistory.shift();\n    } else {\n      setHistoryIndex(prevIndex => prevIndex + 1);\n    }\n    \n    setHistory(newHistory);\n  }, [seats, sections, stage, history, historyIndex]);\n\n  const undo = useCallback(() => {\n    if (historyIndex > 0) {\n      const newIndex = historyIndex - 1;\n      const state = history[newIndex];\n      setSeats(state.seats);\n      setSections(state.sections);\n      setStage(state.stage);\n      setHistoryIndex(newIndex);\n    }\n  }, [history, historyIndex]);\n\n  const redo = useCallback(() => {\n    if (historyIndex < history.length - 1) {\n      const newIndex = historyIndex + 1;\n      const state = history[newIndex];\n      setSeats(state.seats);\n      setSections(state.sections);\n      setStage(state.stage);\n      setHistoryIndex(newIndex);\n    }\n  }, [history, historyIndex]);\n\n  // 데이터 로드\n  useEffect(() => {\n    if (venueId) {\n      loadSeatLayout();\n    }\n    loadTemplates();\n  }, [venueId]);\n\n  const loadSeatLayout = async () => {\n    try {\n      setLoading(true);\n      const response = await seatLayoutAPI.getVenueLayout(venueId);\n      \n      if (response.seats && response.seats.length > 0) {\n        const loadedSeats = response.seats.map(seat => ({\n          id: seat.id || `seat-${Date.now()}-${Math.random()}`,\n          x: seat.x || seat.xPosition || 0,\n          y: seat.y || seat.yPosition || 0,\n          type: seat.type || seat.seatType || 'REGULAR',\n          section: seat.section || seat.sectionId || 1,\n          label: seat.label || seat.seatLabel || '1',\n          price: seat.price || SEAT_TYPES[seat.type || 'REGULAR'].price,\n          isActive: seat.isActive !== undefined ? seat.isActive : true,\n          rotation: seat.rotation || 0\n        }));\n        setSeats(loadedSeats);\n        saveToHistory();\n      }\n      \n      if (response.sections && response.sections.length > 0) {\n        setSections(response.sections.map(section => ({\n          id: section.id || section.sectionId,\n          name: section.name || section.sectionName || `${section.id}구역`,\n          color: section.color || section.sectionColor || SECTION_COLORS[(section.id - 1) % SECTION_COLORS.length],\n          seatCount: section.seatCount || 0\n        })));\n      }\n      \n      if (response.stage) {\n        setStage(response.stage);\n      }\n      \n      if (response.editMode) {\n        setEditMode(response.editMode);\n      }\n    } catch (error) {\n      console.error('좌석 배치 로드 실패:', error);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const loadTemplates = async () => {\n    try {\n      const templates = await seatLayoutAPI.getAvailableTemplates();\n      const previews = await Promise.all(\n        templates.map(async (template) => {\n          try {\n            const preview = await seatLayoutAPI.getTemplatePreview(template.name, { editMode });\n            return { ...template, preview };\n          } catch (error) {\n            console.warn(`템플릿 미리보기 로드 실패: ${template.name}`, error);\n            return template;\n          }\n        })\n      );\n      setTemplatePreviews(previews);\n    } catch (error) {\n      console.error('템플릿 로드 실패:', error);\n    }\n  };\n\n  // 좌석 컴포넌트\n  const SeatComponent = ({ seat, isSelected, onMouseDown, onClick, onContextMenu }) => {\n    const seatType = SEAT_TYPES[seat.type] || SEAT_TYPES.REGULAR;\n    const section = sections.find(s => s.id === seat.section) || sections[0];\n    \n    return (\n      <div\n        className={`seat-component ${isSelected ? 'selected' : ''} ${currentTool}`}\n        style={{\n          position: 'absolute',\n          left: editMode === 'grid' ? seat.x * gridSize : seat.x,\n          top: editMode === 'grid' ? seat.y * gridSize : seat.y,\n          width: editMode === 'grid' ? gridSize - 4 : 40,\n          height: editMode === 'grid' ? gridSize - 4 : 40,\n          backgroundColor: seatType.color,\n          border: `3px solid ${isSelected ? '#FF6600' : (section?.color || '#FFFFFF')}`,\n          borderRadius: '8px',\n          display: 'flex',\n          alignItems: 'center',\n          justifyContent: 'center',\n          color: 'white',\n          fontSize: '10px',\n          fontWeight: 'bold',\n          cursor: currentTool === 'add' ? 'crosshair' : \n                  currentTool === 'select' ? 'pointer' :\n                  currentTool === 'delete' ? 'not-allowed' : 'move',\n          userSelect: 'none',\n          boxShadow: isSelected ? '0 0 0 3px rgba(255, 102, 0, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)',\n          transition: 'all 0.2s ease',\n          zIndex: isSelected ? 10 : 1,\n          transform: `scale(${isSelected ? 1.1 : 1}) rotate(${seat.rotation || 0}deg)`\n        }}\n        onMouseDown={onMouseDown}\n        onClick={onClick}\n        onContextMenu={onContextMenu}\n        title={`${seat.label} (${seatType.name})`}\n      >\n        {seat.label}\n      </div>\n    );\n  };\n\n  // 무대 컴포넌트\n  const StageComponent = () => (\n    <div\n      className=\"stage-component\"\n      style={{\n        position: 'absolute',\n        left: stage.x,\n        top: stage.y,\n        width: stage.width,\n        height: stage.height,\n        backgroundColor: '#1F2937',\n        border: '2px solid #374151',\n        borderRadius: '12px',\n        display: 'flex',\n        alignItems: 'center',\n        justifyContent: 'center',\n        color: 'white',\n        fontSize: '16px',\n        fontWeight: 'bold',\n        zIndex: 5,\n        boxShadow: '0 4px 8px rgba(0,0,0,0.2)',\n        transform: `rotate(${stage.rotation || 0}deg)`\n      }}\n    >\n      STAGE\n    </div>\n  );\n\n  // 격자 오버레이\n  const GridOverlay = () => {\n    if (!showGrid) return null;\n    \n    const cols = Math.floor(canvasSize.width / gridSize);\n    const rows = Math.floor(canvasSize.height / gridSize);\n    \n    return (\n      <svg\n        className=\"grid-overlay\"\n        style={{\n          position: 'absolute',\n          top: 0,\n          left: 0,\n          width: '100%',\n          height: '100%',\n          pointerEvents: 'none',\n          zIndex: 0\n        }}\n      >\n        {Array.from({ length: cols + 1 }, (_, i) => (\n          <line\n            key={`v-${i}`}\n            x1={i * gridSize}\n            y1={0}\n            x2={i * gridSize}\n            y2={canvasSize.height}\n            stroke=\"#E5E7EB\"\n            strokeWidth=\"1\"\n            opacity=\"0.5\"\n          />\n        ))}\n        {Array.from({ length: rows + 1 }, (_, i) => (\n          <line\n            key={`h-${i}`}\n            x1={0}\n            y1={i * gridSize}\n            x2={canvasSize.width}\n            y2={i * gridSize}\n            stroke=\"#E5E7EB\"\n            strokeWidth=\"1\"\n            opacity=\"0.5\"\n          />\n        ))}\n      </svg>\n    );\n  };\n\n  // 드래그 선택 영역\n  const DragSelectOverlay = () => {\n    if (!isDragSelecting || !dragSelectRect) return null;\n    \n    return (\n      <div\n        className=\"drag-select-overlay\"\n        style={{\n          position: 'absolute',\n          left: dragSelectRect.x,\n          top: dragSelectRect.y,\n          width: dragSelectRect.width,\n          height: dragSelectRect.height,\n          border: '2px dashed #007bff',\n          backgroundColor: 'rgba(0, 123, 255, 0.1)',\n          pointerEvents: 'none',\n          zIndex: 20\n        }}\n      />\n    );\n  };\n\n  // 마우스 위치 계산\n  const getMousePosition = useCallback((e) => {\n    if (!canvasRef.current) return { x: 0, y: 0 };\n    \n    const rect = canvasRef.current.getBoundingClientRect();\n    const x = e.clientX - rect.left;\n    const y = e.clientY - rect.top;\n    \n    if (editMode === 'grid') {\n      return {\n        x: Math.floor(x / gridSize),\n        y: Math.floor(y / gridSize)\n      };\n    }\n    \n    return { x, y };\n  }, [editMode, gridSize]);\n\n  // 좌석 추가\n  const addSeat = useCallback((e) => {\n    if (currentTool !== 'add') return;\n    \n    const pos = getMousePosition(e);\n    const currentSection = sections.find(s => s.id === selectedSection);\n    \n    // 경계 체크\n    if (editMode === 'grid') {\n      if (pos.x < 0 || pos.x >= Math.floor(canvasSize.width / gridSize) || \n          pos.y < 0 || pos.y >= Math.floor(canvasSize.height / gridSize)) {\n        return;\n      }\n      \n      // 중복 체크\n      const existingSeat = seats.find(seat => seat.x === pos.x && seat.y === pos.y);\n      if (existingSeat) return;\n    } else {\n      if (pos.x < 20 || pos.x > canvasSize.width - 60 || pos.y < 20 || pos.y > canvasSize.height - 60) {\n        return;\n      }\n    }\n    \n    const newSeat = {\n      id: `seat-${Date.now()}-${Math.random()}`,\n      x: pos.x,\n      y: pos.y,\n      type: selectedSeatType,\n      section: selectedSection,\n      label: `${currentSection?.name || '1구역'}-${seats.length + 1}`,\n      price: SEAT_TYPES[selectedSeatType].price,\n      isActive: true,\n      rotation: 0\n    };\n    \n    setSeats(prev => [...prev, newSeat]);\n    saveToHistory();\n  }, [currentTool, getMousePosition, editMode, gridSize, canvasSize, seats, selectedSeatType, selectedSection, sections, saveToHistory]);\n\n  // 모든 좌석 선택\n  const selectAllSeats = useCallback(() => {\n    setSelectedSeats(seats.map(seat => seat.id));\n  }, [seats]);\n\n  // 선택된 좌석 삭제\n  const deleteSelectedSeats = useCallback(() => {\n    if (selectedSeats.length === 0) return;\n    \n    if (window.confirm(`선택된 ${selectedSeats.length}개의 좌석을 삭제하시겠습니까?`)) {\n      setSeats(prev => prev.filter(seat => !selectedSeats.includes(seat.id)));\n      setSelectedSeats([]);\n      saveToHistory();\n    }\n  }, [selectedSeats, saveToHistory]);\n\n  // 좌석 선택/삭제\n  const handleSeatClick = useCallback((seat, e) => {\n    e.stopPropagation();\n    \n    if (currentTool === 'select') {\n      setSelectedSeats(prev => {\n        if (prev.includes(seat.id)) {\n          return prev.filter(id => id !== seat.id);\n        } else {\n          return e.ctrlKey || e.metaKey ? [...prev, seat.id] : [seat.id];\n        }\n      });\n    } else if (currentTool === 'delete') {\n      setSeats(prev => prev.filter(s => s.id !== seat.id));\n      setSelectedSeats(prev => prev.filter(id => id !== seat.id));\n      saveToHistory();\n    }\n  }, [currentTool, saveToHistory]);\n\n  // 우클릭으로 좌석 삭제\n  const handleSeatContextMenu = useCallback((seat, e) => {\n    e.preventDefault();\n    setSeats(prev => prev.filter(s => s.id !== seat.id));\n    setSelectedSeats(prev => prev.filter(id => id !== seat.id));\n    saveToHistory();\n  }, [saveToHistory]);\n\n  // 좌석 드래그\n  const handleSeatMouseDown = useCallback((seat, e) => {\n    if (editMode === 'free' && currentTool === 'select') {\n      e.stopPropagation();\n      const pos = getMousePosition(e);\n      setDraggedSeat({\n        ...seat,\n        offsetX: pos.x - seat.x,\n        offsetY: pos.y - seat.y\n      });\n    } else {\n      handleSeatClick(seat, e);\n    }\n  }, [editMode, currentTool, getMousePosition, handleSeatClick]);\n\n  // 캔버스 마우스 다운 (드래그 선택 시작)\n  const handleCanvasMouseDown = useCallback((e) => {\n    if (currentTool === 'select' && editMode === 'free') {\n      const pos = getMousePosition(e);\n      setIsDragSelecting(true);\n      setDragSelectStart(pos);\n      setDragSelectEnd(pos);\n      setDragSelectRect({ x: pos.x, y: pos.y, width: 0, height: 0 });\n    }\n  }, [currentTool, editMode, getMousePosition]);\n\n  // 마우스 이동 처리\n  const handleMouseMove = useCallback((e) => {\n    if (isDragSelecting) {\n      const pos = getMousePosition(e);\n      setDragSelectEnd(pos);\n      \n      const minX = Math.min(dragSelectStart.x, pos.x);\n      const minY = Math.min(dragSelectStart.y, pos.y);\n      const maxX = Math.max(dragSelectStart.x, pos.x);\n      const maxY = Math.max(dragSelectStart.y, pos.y);\n      \n      setDragSelectRect({\n        x: minX,\n        y: minY,\n        width: maxX - minX,\n        height: maxY - minY\n      });\n    } else if (draggedSeat && editMode === 'free') {\n      const pos = getMousePosition(e);\n      const newX = Math.max(0, Math.min(pos.x - draggedSeat.offsetX, canvasSize.width - 40));\n      const newY = Math.max(0, Math.min(pos.y - draggedSeat.offsetY, canvasSize.height - 40));\n      \n      setSeats(prev => prev.map(seat => \n        seat.id === draggedSeat.id \n          ? { ...seat, x: newX, y: newY }\n          : seat\n      ));\n    }\n  }, [isDragSelecting, draggedSeat, editMode, getMousePosition, dragSelectStart, canvasSize]);\n\n  // 마우스 업 처리\n  const handleMouseUp = useCallback(() => {\n    if (isDragSelecting && dragSelectRect) {\n      const selectedSeatIds = seats\n        .filter(seat => {\n          const seatX = editMode === 'grid' ? seat.x * gridSize : seat.x;\n          const seatY = editMode === 'grid' ? seat.y * gridSize : seat.y;\n          \n          return (\n            seatX >= dragSelectRect.x &&\n            seatX <= dragSelectRect.x + dragSelectRect.width &&\n            seatY >= dragSelectRect.y &&\n            seatY <= dragSelectRect.y + dragSelectRect.height\n          );\n        })\n        .map(seat => seat.id);\n      \n      setSelectedSeats(prev => [...new Set([...prev, ...selectedSeatIds])]);\n    }\n    \n    if (draggedSeat) {\n      saveToHistory();\n    }\n    \n    setDraggedSeat(null);\n    setIsDragSelecting(false);\n    setDragSelectRect(null);\n  }, [isDragSelecting, dragSelectRect, seats, editMode, gridSize, draggedSeat, saveToHistory]);\n\n  // 전역 마우스 이벤트 리스너\n  useEffect(() => {\n    if (draggedSeat || isDragSelecting) {\n      document.addEventListener('mousemove', handleMouseMove);\n      document.addEventListener('mouseup', handleMouseUp);\n      \n      return () => {\n        document.removeEventListener('mousemove', handleMouseMove);\n        document.removeEventListener('mouseup', handleMouseUp);\n      };\n    }\n  }, [draggedSeat, isDragSelecting, handleMouseMove, handleMouseUp]);\n\n  // 템플릿 적용\n  const applyTemplate = useCallback(async (templateName, config = {}) => {\n    try {\n      setLoading(true);\n      const fullConfig = { ...config, editMode };\n      const response = await seatLayoutAPI.applyTemplate(venueId, templateName, fullConfig);\n      \n      if (response.seats) {\n        const appliedSeats = response.seats.map(seat => ({\n          id: seat.id || `seat-${Date.now()}-${Math.random()}`,\n          x: seat.x || seat.xPosition || 0,\n          y: seat.y || seat.yPosition || 0,\n          type: seat.type || seat.seatType || 'REGULAR',\n          section: seat.section || seat.sectionId || 1,\n          label: seat.label || seat.seatLabel || '1',\n          price: seat.price || SEAT_TYPES[seat.type || 'REGULAR'].price,\n          isActive: seat.isActive !== undefined ? seat.isActive : true,\n          rotation: seat.rotation || 0\n        }));\n        setSeats(appliedSeats);\n      }\n      \n      if (response.sections) {\n        setSections(response.sections);\n      }\n      \n      setSelectedSeats([]);\n      saveToHistory();\n      setShowTemplateModal(false);\n    } catch (error) {\n      console.error('템플릿 적용 실패:', error);\n      alert('템플릿 적용 중 오류가 발생했습니다.');\n    } finally {\n      setLoading(false);\n    }\n  }, [venueId, editMode, saveToHistory]);\n\n  // 선택된 좌석 일괄 편집\n  const editSelectedSeats = useCallback((changes) => {\n    setSeats(prev => prev.map(seat => {\n      if (selectedSeats.includes(seat.id)) {\n        const updatedSeat = { ...seat, ...changes };\n        if (changes.type) {\n          updatedSeat.price = SEAT_TYPES[changes.type].price;\n        }\n        return updatedSeat;\n      }\n      return seat;\n    }));\n    saveToHistory();\n  }, [selectedSeats, saveToHistory]);\n\n  // 좌석 배치 유효성 검사\n  const validateLayout = useCallback(async () => {\n    try {\n      const layoutData = {\n        seats: seats.map(seat => ({\n          id: seat.originalId || null,\n          x: seat.x,\n          y: seat.y,\n          type: seat.type,\n          section: seat.section,\n          label: seat.label,\n          price: seat.price,\n          isActive: seat.isActive,\n          rotation: seat.rotation\n        })),\n        sections: sections,\n        stage: stage,\n        canvas: { width: canvasSize.width, height: canvasSize.height, gridSize: gridSize },\n        editMode: editMode\n      };\n\n      const validation = await seatLayoutAPI.validateSeatLayout(venueId, layoutData);\n      setValidationErrors(validation.issues || []);\n      \n      if (validation.valid) {\n        alert('✅ 좌석 배치가 유효합니다!');\n      } else {\n        alert('❌ 좌석 배치에 문제가 있습니다. 오류 목록을 확인하세요.');\n      }\n    } catch (error) {\n      console.error('유효성 검사 실패:', error);\n      setValidationErrors(['유효성 검사 중 오류가 발생했습니다.']);\n    }\n  }, [venueId, seats, sections, stage, canvasSize, gridSize, editMode]);\n\n  // 전체 삭제\n  const clearAllSeats = useCallback(() => {\n    if (window.confirm('모든 좌석을 삭제하시겠습니까?')) {\n      setSeats([]);\n      setSelectedSeats([]);\n      saveToHistory();\n    }\n  }, [saveToHistory]);\n\n  // 저장\n  const saveLayout = useCallback(async () => {\n    try {\n      setLoading(true);\n      const layoutData = {\n        seats: seats.map(seat => ({\n          id: seat.originalId || null,\n          x: seat.x,\n          y: seat.y,\n          type: seat.type,\n          section: seat.section,\n          label: seat.label,\n          price: seat.price,\n          isActive: seat.isActive,\n          rotation: seat.rotation\n        })),\n        sections: sections,\n        stage: stage,\n        canvas: { width: canvasSize.width, height: canvasSize.height, gridSize: gridSize },\n        editMode: editMode\n      };\n\n      await seatLayoutAPI.saveVenueLayout(venueId, layoutData);\n      alert('✅ 좌석 배치가 저장되었습니다!');\n    } catch (error) {\n      console.error('저장 실패:', error);\n      alert('❌ 저장 중 오류가 발생했습니다.');\n    } finally {\n      setLoading(false);\n    }\n  }, [venueId, seats, sections, stage, canvasSize, gridSize, editMode]);\n\n  // 통계 계산\n  const statistics = {\n    totalSeats: seats.length,\n    totalRevenue: seats.reduce((sum, seat) => sum + seat.price, 0),\n    selectedSeats: selectedSeats.length,\n    seatTypes: Object.keys(SEAT_TYPES).reduce((acc, type) => {\n      acc[type] = seats.filter(seat => seat.type === type).length;\n      return acc;\n    }, {})\n  };\n\n  // 템플릿 모달\n  const TemplateModal = () => {\n    if (!showTemplateModal) return null;\n    \n    return (\n      <div className=\"modal-overlay\" onClick={() => setShowTemplateModal(false)}>\n        <div className=\"template-modal\" onClick={(e) => e.stopPropagation()}>\n          <div className=\"modal-header\">\n            <h3>🏛️ 템플릿 선택</h3>\n            <button onClick={() => setShowTemplateModal(false)} className=\"close-button\">×</button>\n          </div>\n          <div className=\"template-grid\">\n            {templatePreviews.map(template => (\n              <div key={template.name} className=\"template-card\">\n                <div className=\"template-preview\">\n                  <div className=\"template-image\">\n                    {/* 템플릿 미리보기 이미지 또는 간단한 도식 */}\n                    <div className=\"template-diagram\">\n                      {Array.from({ length: Math.min(template.rows || 8, 6) }, (_, row) => (\n                        <div key={row} className=\"template-row\">\n                          {Array.from({ length: Math.min(template.cols || 6, 8) }, (_, col) => (\n                            <div key={col} className=\"template-seat\" />\n                          ))}\n                        </div>\n                      ))}\n                    </div>\n                  </div>\n                  <div className=\"template-info\">\n                    <h4>{template.displayName}</h4>\n                    <p>{template.description}</p>\n                    <div className=\"template-stats\">\n                      <span>📐 {template.rows}행 × {template.cols}열</span>\n                      <span>🪑 약 {template.estimatedSeats}석</span>\n                      {template.preview && (\n                        <span>💰 {template.preview.estimatedRevenue?.toLocaleString()}원</span>\n                      )}\n                    </div>\n                  </div>\n                </div>\n                <button\n                  onClick={() => applyTemplate(template.name)}\n                  className=\"btn btn-primary btn-block\"\n                  disabled={loading}\n                >\n                  {template.isPopular && '⭐ '}{loading ? '적용 중...' : '적용하기'}\n                </button>\n              </div>\n            ))}\n          </div>\n        </div>\n      </div>\n    );\n  };\n\n  if (loading && seats.length === 0) {\n    return (\n      <div className=\"seat-layout-editor loading\">\n        <div className=\"loading-container\">\n          <div className=\"loading-spinner\"></div>\n          <span>좌석 배치를 불러오는 중...</span>\n        </div>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"seat-layout-editor\">\n      {/* 헤더 */}\n      <div className=\"header\">\n        <div className=\"header-left\">\n          <h2>🎭 개선된 좌석 배치 에디터</h2>\n          <p className=\"stats\">\n            총 {statistics.totalSeats}개 좌석 | 선택됨: {statistics.selectedSeats}개 | \n            예상 수익: {statistics.totalRevenue.toLocaleString()}원\n            {validationErrors.length > 0 && (\n              <span className=\"validation-errors\"> | ⚠️ {validationErrors.length}개 오류</span>\n            )}\n          </p>\n        </div>\n        \n        <div className=\"header-center\">\n          {/* 모드 전환 */}\n          <div className=\"mode-toggle\">\n            <button\n              onClick={() => setEditMode('grid')}\n              className={`mode-btn ${editMode === 'grid' ? 'active' : ''}`}\n            >\n              📐 격자 모드\n            </button>\n            <button\n              onClick={() => setEditMode('free')}\n              className={`mode-btn ${editMode === 'free' ? 'active' : ''}`}\n            >\n              🖱️ 자유 배치\n            </button>\n          </div>\n        </div>\n        \n        <div className=\"header-right\">\n          <div className=\"action-buttons\">\n            <button\n              onClick={() => setShowTemplateModal(true)}\n              className=\"btn btn-info\"\n              title=\"템플릿 적용\"\n            >\n              🏛️ 템플릿\n            </button>\n            \n            <button\n              onClick={validateLayout}\n              className=\"btn btn-warning\"\n              title=\"유효성 검사\"\n            >\n              ✅ 검사\n            </button>\n            \n            <button\n              onClick={undo}\n              disabled={historyIndex <= 0}\n              className=\"btn btn-secondary\"\n              title=\"되돌리기 (Ctrl+Z)\"\n            >\n              ↶ 되돌리기\n            </button>\n            \n            <button\n              onClick={redo}\n              disabled={historyIndex >= history.length - 1}\n              className=\"btn btn-secondary\"\n              title=\"다시하기 (Ctrl+Y)\"\n            >\n              ↷ 다시하기\n            </button>\n            \n            <button\n              onClick={saveLayout}\n              disabled={loading}\n              className={`btn btn-primary ${loading ? 'loading' : ''}`}\n              title=\"저장 (Ctrl+S)\"\n            >\n              {loading ? '💾 저장 중...' : '💾 저장'}\n            </button>\n            \n            <button onClick={onClose} className=\"btn btn-secondary\">\n              ✖️ 닫기\n            </button>\n          </div>\n        </div>\n      </div>\n\n      {/* 키보드 단축키 도움말 */}\n      <div className=\"keyboard-shortcuts\">\n        <small>\n          <strong>단축키:</strong> \n          1-3 (도구 변경) | G (격자) | Ctrl+A (전체선택) | Ctrl+S (저장) | Ctrl+Z/Y (되돌리기/다시하기) | Del (삭제)\n        </small>\n      </div>\n\n      {/* 유효성 검사 오류 */}\n      {validationErrors.length > 0 && (\n        <div className=\"validation-panel\">\n          <h4>⚠️ 유효성 검사 오류</h4>\n          <ul>\n            {validationErrors.map((error, index) => (\n              <li key={index}>{error}</li>\n            ))}\n          </ul>\n        </div>\n      )}\n\n      {/* 메인 콘텐츠 */}\n      <div className=\"main-content\">\n        {/* 사이드바 */}\n        <div className=\"sidebar\">\n          {/* 도구 선택 */}\n          <div className=\"section\">\n            <h3>🔧 도구</h3>\n            <div className=\"tool-buttons\">\n              {[\n                { key: 'add', label: '➕ 좌석 추가 (1)', color: '#28a745' },\n                { key: 'select', label: '🎯 좌석 선택 (2)', color: '#ffc107' },\n                { key: 'delete', label: '🗑️ 좌석 삭제 (3)', color: '#dc3545' }\n              ].map(tool => (\n                <button\n                  key={tool.key}\n                  onClick={() => setCurrentTool(tool.key)}\n                  className={`tool-btn ${currentTool === tool.key ? 'active' : ''}`}\n                  style={{ '--tool-color': tool.color }}\n                >\n                  {tool.label}\n                </button>\n              ))}\n            </div>\n          </div>\n\n          {/* 좌석 타입 */}\n          <div className=\"section\">\n            <h3>🪑 좌석 타입</h3>\n            <div className=\"seat-types\">\n              {Object.entries(SEAT_TYPES).map(([type, info]) => (\n                <button\n                  key={type}\n                  onClick={() => setSelectedSeatType(type)}\n                  className={`seat-type-btn ${selectedSeatType === type ? 'active' : ''}`}\n                  style={{ '--seat-color': info.color }}\n                >\n                  <div className=\"seat-type-color\" style={{ backgroundColor: info.color }} />\n                  <div className=\"seat-type-info\">\n                    <div className=\"seat-type-name\">{info.name}</div>\n                    <div className=\"seat-type-price\">{info.price.toLocaleString()}원</div>\n                    <div className=\"seat-type-count\">({statistics.seatTypes[type] || 0}개)</div>\n                  </div>\n                </button>\n              ))}\n            </div>\n          </div>\n\n          {/* 선택된 좌석 편집 */}\n          {selectedSeats.length > 0 && (\n            <div className=\"section edit-section\">\n              <h3>✏️ 선택된 좌석 편집 ({selectedSeats.length}개)</h3>\n              <div className=\"edit-controls\">\n                <select\n                  onChange={(e) => e.target.value && editSelectedSeats({ type: e.target.value })}\n                  className=\"select-control\"\n                  defaultValue=\"\"\n                >\n                  <option value=\"\">좌석 타입 변경</option>\n                  {Object.entries(SEAT_TYPES).map(([type, info]) => (\n                    <option key={type} value={type}>{info.name}</option>\n                  ))}\n                </select>\n                \n                <select\n                  onChange={(e) => e.target.value && editSelectedSeats({ section: parseInt(e.target.value) })}\n                  className=\"select-control\"\n                  defaultValue=\"\"\n                >\n                  <option value=\"\">섹션 이동</option>\n                  {sections.map(section => (\n                    <option key={section.id} value={section.id}>{section.name}</option>\n                  ))}\n                </select>\n                \n                <button\n                  onClick={() => editSelectedSeats({ rotation: 0 })}\n                  className=\"btn btn-info btn-sm\"\n                >\n                  🔄 회전 초기화\n                </button>\n                \n                <button\n                  onClick={deleteSelectedSeats}\n                  className=\"btn btn-danger btn-sm\"\n                >\n                  선택된 좌석 삭제\n                </button>\n              </div>\n            </div>\n          )}\n\n          {/* 관리 */}\n          <div className=\"section\">\n            <h3>🔧 관리</h3>\n            <div className=\"management-controls\">\n              <button onClick={selectAllSeats} className=\"btn btn-info btn-sm\">\n                🎯 전체 선택 (Ctrl+A)\n              </button>\n              <button onClick={clearAllSeats} className=\"btn btn-danger btn-sm\">\n                🗑️ 전체 삭제\n              </button>\n            </div>\n          </div>\n\n          {/* 옵션 */}\n          <div className=\"section\">\n            <h3>⚙️ 옵션</h3>\n            <label className=\"checkbox-label\">\n              <input\n                type=\"checkbox\"\n                checked={showGrid}\n                onChange={(e) => setShowGrid(e.target.checked)}\n              />\n              <span>격자 표시 (G)</span>\n            </label>\n          </div>\n        </div>\n\n        {/* 캔버스 영역 */}\n        <div className=\"canvas-area\">\n          <div\n            ref={canvasRef}\n            className={`canvas ${editMode}-mode ${currentTool}-tool`}\n            style={{\n              width: canvasSize.width,\n              height: canvasSize.height\n            }}\n            onClick={addSeat}\n            onMouseDown={handleCanvasMouseDown}\n          >\n            {/* 격자 */}\n            {editMode === 'grid' && <GridOverlay />}\n            \n            {/* 드래그 선택 영역 */}\n            <DragSelectOverlay />\n            \n            {/* 무대 */}\n            <StageComponent />\n            \n            {/* 좌석들 */}\n            {seats.map(seat => (\n              <SeatComponent\n                key={seat.id}\n                seat={seat}\n                isSelected={selectedSeats.includes(seat.id)}\n                onMouseDown={(e) => handleSeatMouseDown(seat, e)}\n                onClick={(e) => handleSeatClick(seat, e)}\n                onContextMenu={(e) => handleSeatContextMenu(seat, e)}\n              />\n            ))}\n          </div>\n          \n          {/* 도움말 */}\n          <div className=\"help-text\">\n            <strong>\n              {editMode === 'grid' ? '📐 격자 모드' : '🖱️ 자유 배치 모드'} | \n              {currentTool === 'add' && ' 캔버스를 클릭하여 좌석을 추가하세요.'}\n              {currentTool === 'select' && ' 좌석을 클릭하여 선택하세요. Ctrl+클릭으로 다중 선택, 드래그로 영역 선택이 가능합니다.'}\n              {currentTool === 'delete' && ' 좌석을 클릭하거나 우클릭하여 삭제하세요.'}\n            </strong>\n          </div>\n        </div>\n      </div>\n\n      {/* 템플릿 모달 */}\n      <TemplateModal />\n    </div>\n  );\n};\n\nexport default SeatLayoutEditor;"
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { venueAPI, seatLayoutAPI } from '../services/api';
+
+// 좌석 타입 정의 (가격과 아이콘 포함)
+const SEAT_TYPES = {
+  REGULAR: { color: '#3B82F6', name: '일반석', price: 50000, icon: '💺' },
+  VIP: { color: '#F59E0B', name: 'VIP석', price: 100000, icon: '👑' },
+  PREMIUM: { color: '#8B5CF6', name: '프리미엄석', price: 75000, icon: '⭐' },
+  WHEELCHAIR: { color: '#10B981', name: '휠체어석', price: 50000, icon: '♿' },
+  BLOCKED: { color: '#6B7280', name: '막힌 좌석', price: 0, icon: '❌' }
+};
+
+// 편집 도구
+const EDIT_TOOLS = {
+  SELECT: 'select',
+  ADD_SEAT: 'add_seat', 
+  DELETE: 'delete',
+  MOVE: 'move'
+};
+
+// 템플릿 목록
+const TEMPLATES = {
+  THEATER: { name: '극장형', rows: 20, cols: 30, description: '전통적인 극장 배치' },
+  CONCERT: { name: '콘서트홀', rows: 15, cols: 40, description: '콘서트에 최적화' },
+  CLASSROOM: { name: '강의실', rows: 10, cols: 20, description: '교육용 배치' },
+  STADIUM: { name: '스타디움', rows: 50, cols: 60, description: '대규모 경기장' }
+};
+
+const SeatLayoutEditor = ({ venueId = 1 }) => {
+  // 상태 관리
+  const [seats, setSeats] = useState([]);
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [currentTool, setCurrentTool] = useState(EDIT_TOOLS.SELECT);
+  const [currentSeatType, setCurrentSeatType] = useState('REGULAR');
+  const [canvas, setCanvas] = useState({ width: 1000, height: 700, gridSize: 40 });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+  const [editMode, setEditMode] = useState('grid'); // 'grid' 또는 'flexible'
+  const [showGrid, setShowGrid] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [statistics, setStatistics] = useState({});
+  const [showHelp, setShowHelp] = useState(false);
+
+  // 참조
+  const canvasRef = useRef(null);
+
+  // 그리드 스냅 함수
+  const snapToGrid = useCallback((x, y) => {
+    if (editMode === 'flexible') return { x, y };
+    const { gridSize } = canvas;
+    return {
+      x: Math.round(x / gridSize) * gridSize,
+      y: Math.round(y / gridSize) * gridSize
+    };
+  }, [canvas.gridSize, editMode]);
+
+  // 좌석 라벨 생성
+  const generateSeatLabel = useCallback((x, y) => {
+    const row = String.fromCharCode(65 + Math.floor(y / canvas.gridSize));
+    const col = Math.floor(x / canvas.gridSize) + 1;
+    return `${row}${col}`;
+  }, [canvas.gridSize]);
+
+  // 좌석 추가
+  const addSeat = useCallback((x, y, type = currentSeatType) => {
+    const snapped = snapToGrid(x, y);
+    
+    // 이미 해당 위치에 좌석이 있는지 확인
+    const existingSeat = seats.find(seat => 
+      Math.abs(seat.x - snapped.x) < 20 && Math.abs(seat.y - snapped.y) < 20
+    );
+    if (existingSeat) return;
+
+    const newSeat = {
+      id: `seat_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      x: snapped.x,
+      y: snapped.y,
+      type: type,
+      label: generateSeatLabel(snapped.x, snapped.y),
+      price: SEAT_TYPES[type]?.price || 50000,
+      isAvailable: true,
+      rotation: 0
+    };
+
+    setSeats(prev => [...prev, newSeat]);
+    updateStatistics([...seats, newSeat]);
+  }, [seats, currentSeatType, snapToGrid, generateSeatLabel]);
+
+  // 좌석 삭제
+  const deleteSeat = useCallback((seatId) => {
+    setSeats(prev => {
+      const updated = prev.filter(seat => seat.id !== seatId);
+      updateStatistics(updated);
+      return updated;
+    });
+    setSelectedSeats(prev => prev.filter(id => id !== seatId));
+  }, []);
+
+  // 여러 좌석 삭제
+  const deleteSelectedSeats = useCallback(() => {
+    if (selectedSeats.length === 0) return;
+    
+    if (window.confirm(`선택된 ${selectedSeats.length}개의 좌석을 삭제하시겠습니까?`)) {
+      setSeats(prev => {
+        const updated = prev.filter(seat => !selectedSeats.includes(seat.id));
+        updateStatistics(updated);
+        return updated;
+      });
+      setSelectedSeats([]);
+    }
+  }, [selectedSeats]);
+
+  // 좌석 이동
+  const moveSeat = useCallback((seatId, newX, newY) => {
+    const snapped = snapToGrid(newX, newY);
+    
+    setSeats(prev => prev.map(seat => 
+      seat.id === seatId 
+        ? { ...seat, x: snapped.x, y: snapped.y, label: generateSeatLabel(snapped.x, snapped.y) }
+        : seat
+    ));
+  }, [snapToGrid, generateSeatLabel]);
+
+  // 좌석 선택
+  const selectSeat = useCallback((seatId, multiSelect = false) => {
+    if (multiSelect) {
+      setSelectedSeats(prev => 
+        prev.includes(seatId) 
+          ? prev.filter(id => id !== seatId)
+          : [...prev, seatId]
+      );
+    } else {
+      setSelectedSeats([seatId]);
+    }
+  }, []);
+
+  // 선택된 좌석의 타입 변경
+  const changeSelectedSeatsType = useCallback((type) => {
+    const updatedSeats = seats.map(seat => 
+      selectedSeats.includes(seat.id)
+        ? { ...seat, type, price: SEAT_TYPES[type]?.price || 50000 }
+        : seat
+    );
+    setSeats(updatedSeats);
+    updateStatistics(updatedSeats);
+  }, [selectedSeats, seats]);
+
+  // 캔버스 클릭 처리
+  const handleCanvasClick = useCallback((e) => {
+    if (isLoading || currentTool !== EDIT_TOOLS.ADD_SEAT) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    addSeat(x, y);
+  }, [currentTool, addSeat, isLoading]);
+
+  // 좌석 클릭 처리
+  const handleSeatClick = useCallback((e, seat) => {
+    e.stopPropagation();
+    
+    switch (currentTool) {
+      case EDIT_TOOLS.SELECT:
+        selectSeat(seat.id, e.ctrlKey || e.metaKey);
+        break;
+      case EDIT_TOOLS.DELETE:
+        deleteSeat(seat.id);
+        break;
+      case EDIT_TOOLS.ADD_SEAT:
+        // 기존 좌석 위에 다른 타입으로 변경
+        if (seat.type !== currentSeatType) {
+          setSeats(prev => prev.map(s => 
+            s.id === seat.id ? { ...s, type: currentSeatType, price: SEAT_TYPES[currentSeatType]?.price || 50000 } : s
+          ));
+        }
+        break;
+    }
+  }, [currentTool, selectSeat, deleteSeat, currentSeatType]);
+
+  // 드래그 시작
+  const handleMouseDown = useCallback((e, seat) => {
+    if (currentTool === EDIT_TOOLS.MOVE) {
+      setIsDragging(true);
+      const rect = canvasRef.current.getBoundingClientRect();
+      setDragStart({ 
+        x: e.clientX - rect.left, 
+        y: e.clientY - rect.top, 
+        seatX: seat.x, 
+        seatY: seat.y,
+        seatId: seat.id 
+      });
+    }
+  }, [currentTool]);
+
+  // 드래그 중
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || !dragStart) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const newX = dragStart.seatX + (e.clientX - rect.left - dragStart.x);
+    const newY = dragStart.seatY + (e.clientY - rect.top - dragStart.y);
+
+    moveSeat(dragStart.seatId, newX, newY);
+  }, [isDragging, dragStart, moveSeat]);
+
+  // 드래그 끝
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    setDragStart(null);
+  }, []);
+
+  // 템플릿 적용
+  const applyTemplate = useCallback(async (templateName) => {
+    const template = TEMPLATES[templateName];
+    if (!template) return;
+
+    setIsLoading(true);
+    
+    try {
+      // API 호출 시도
+      const response = await seatLayoutAPI.applyTemplate(venueId, templateName, {
+        rows: template.rows,
+        cols: template.cols,
+        editMode: editMode
+      });
+      
+      if (response && response.success && response.data) {
+        setSeats(response.data.seats || []);
+        setCanvas(prev => ({
+          ...prev,
+          width: template.cols * prev.gridSize,
+          height: template.rows * prev.gridSize
+        }));
+        updateStatistics(response.data.seats || []);
+        alert('템플릿이 적용되었습니다.');
+      } else {
+        throw new Error('백엔드 템플릿 적용 실패');
+      }
+    } catch (error) {
+      console.error('템플릿 적용 실패:', error);
+      
+      // 로컬 템플릿 생성 (백엔드 실패 시)
+      const newSeats = [];
+      const { gridSize } = canvas;
+      
+      for (let row = 0; row < template.rows; row++) {
+        for (let col = 0; col < template.cols; col++) {
+          // 통로 생성 (가운데와 양쪽)
+          if (col === Math.floor(template.cols / 2) || (col > 0 && col % 10 === 0)) continue;
+          if (row > 0 && row % 15 === 0) continue; // 섹션별 통로
+
+          const x = col * gridSize;
+          const y = row * gridSize;
+          
+          // 앞 5행은 프리미엄, 중간은 VIP, 뒤는 일반석
+          let seatType = 'REGULAR';
+          if (row < 5) seatType = 'PREMIUM';
+          else if (row < 10) seatType = 'VIP';
+
+          newSeats.push({
+            id: `seat_${row}_${col}`,
+            x,
+            y,
+            type: seatType,
+            label: generateSeatLabel(x, y),
+            price: SEAT_TYPES[seatType].price,
+            isAvailable: true,
+            rotation: 0
+          });
+        }
+      }
+
+      setSeats(newSeats);
+      setCanvas(prev => ({
+        ...prev,
+        width: template.cols * prev.gridSize,
+        height: template.rows * prev.gridSize
+      }));
+      updateStatistics(newSeats);
+      alert(`로컬 템플릿이 적용되었습니다. (${newSeats.length}개 좌석)`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [venueId, editMode, canvas, generateSeatLabel]);
+
+  // 통계 업데이트
+  const updateStatistics = useCallback((seatList) => {
+    const currentSeats = seatList || seats;
+    const stats = {
+      total: currentSeats.length,
+      byType: {},
+      totalRevenue: 0
+    };
+
+    Object.keys(SEAT_TYPES).forEach(type => {
+      const typeSeats = currentSeats.filter(seat => seat.type === type);
+      stats.byType[type] = {
+        count: typeSeats.length,
+        revenue: typeSeats.reduce((sum, seat) => sum + (seat.price || 0), 0)
+      };
+      stats.totalRevenue += stats.byType[type].revenue;
+    });
+
+    setStatistics(stats);
+  }, [seats]);
+
+  // 좌석 정렬
+  const alignSeats = useCallback((alignType) => {
+    if (selectedSeats.length < 2) return;
+    
+    const selectedSeatObjects = seats.filter(seat => selectedSeats.includes(seat.id));
+    
+    switch (alignType) {
+      case 'horizontal':
+        const avgY = selectedSeatObjects.reduce((sum, seat) => sum + seat.y, 0) / selectedSeatObjects.length;
+        setSeats(prev => prev.map(seat => 
+          selectedSeats.includes(seat.id) ? { ...seat, y: avgY } : seat
+        ));
+        break;
+      case 'vertical':
+        const avgX = selectedSeatObjects.reduce((sum, seat) => sum + seat.x, 0) / selectedSeatObjects.length;
+        setSeats(prev => prev.map(seat => 
+          selectedSeats.includes(seat.id) ? { ...seat, x: avgX } : seat
+        ));
+        break;
+      case 'grid':
+        setSeats(prev => prev.map(seat => 
+          selectedSeats.includes(seat.id) 
+            ? { 
+                ...seat, 
+                x: Math.round(seat.x / canvas.gridSize) * canvas.gridSize,
+                y: Math.round(seat.y / canvas.gridSize) * canvas.gridSize
+              } 
+            : seat
+        ));
+        break;
+    }
+  }, [selectedSeats, seats, canvas.gridSize]);
+
+  // 좌석 배치 저장
+  const saveSeatLayout = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const layoutData = {
+        venueId,
+        seats,
+        canvas,
+        editMode,
+        statistics
+      };
+      
+      const response = await seatLayoutAPI.saveSeatLayout(venueId, layoutData);
+      
+      if (response && response.success) {
+        alert('좌석 배치가 저장되었습니다.');
+      } else {
+        throw new Error(response?.error || '저장 실패');
+      }
+    } catch (error) {
+      console.error('저장 실패:', error);
+      alert('저장에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [venueId, seats, canvas, editMode, statistics]);
+
+  // 좌석 배치 불러오기
+  const loadSeatLayout = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await seatLayoutAPI.getSeatLayout(venueId);
+      
+      if (response && response.success && response.data) {
+        setSeats(response.data.seats || []);
+        setCanvas(response.data.canvas || canvas);
+        setEditMode(response.data.editMode || 'grid');
+        updateStatistics(response.data.seats || []);
+      } else {
+        console.log('좌석 배치 데이터가 없습니다. 빈 상태로 시작합니다.');
+      }
+    } catch (error) {
+      console.error('불러오기 실패:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [venueId, canvas]);
+
+  // 이벤트 리스너 등록
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  // 키보드 단축키
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Delete' && selectedSeats.length > 0) {
+        deleteSelectedSeats();
+      } else if (e.key === 'Escape') {
+        setSelectedSeats([]);
+        setCurrentTool(EDIT_TOOLS.SELECT);
+      } else if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault();
+            saveSeatLayout();
+            break;
+          case 'a':
+            e.preventDefault();
+            setSelectedSeats(seats.map(seat => seat.id));
+            break;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSeats, deleteSelectedSeats, saveSeatLayout, seats]);
+
+  // 초기 로드
+  useEffect(() => {
+    loadSeatLayout();
+  }, [loadSeatLayout]);
+  
+  // 초기 통계 업데이트
+  useEffect(() => {
+    updateStatistics();
+  }, [updateStatistics]);
+
+  return (
+    <div style={{ 
+      fontFamily: 'system-ui, -apple-system, sans-serif', 
+      padding: '20px',
+      backgroundColor: '#f8fafc',
+      minHeight: '100vh'
+    }}>
+      {/* 헤더 */}
+      <div style={{ 
+        marginBottom: '20px', 
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '20px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <div>
+            <h1 style={{ margin: '0 0 8px 0', color: '#1f2937', fontSize: '28px', fontWeight: '700' }}>
+              🎭 좌석 배치 에디터
+            </h1>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '16px' }}>
+              직관적인 드래그 앤 드롭으로 완벽한 좌석 배치를 만들어보세요
+            </p>
+          </div>
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: showHelp ? '#3b82f6' : '#e5e7eb',
+              color: showHelp ? 'white' : '#374151',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s'
+            }}
+          >
+            {showHelp ? '❌ 도움말 닫기' : '❓ 도움말'}
+          </button>
+        </div>
+
+        {/* 도움말 패널 */}
+        {showHelp && (
+          <div style={{
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #0ea5e9',
+            borderRadius: '8px',
+            padding: '16px',
+            marginTop: '16px'
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', color: '#0369a1', fontSize: '18px' }}>📖 사용법 가이드</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
+              <div><strong>🖱️ 좌석 추가:</strong> '좌석 추가' 도구 선택 후 빈 공간 클릭</div>
+              <div><strong>🎯 좌석 선택:</strong> '선택' 도구로 좌석 클릭 (Ctrl+클릭으로 다중 선택)</div>
+              <div><strong>🔄 좌석 이동:</strong> '이동' 도구로 좌석을 드래그</div>
+              <div><strong>🗑️ 좌석 삭제:</strong> '삭제' 도구로 좌석 클릭 또는 Delete 키</div>
+              <div><strong>📐 정렬:</strong> 여러 좌석 선택 후 정렬 버튼 사용</div>
+              <div><strong>⌨️ 단축키:</strong> Ctrl+A (전체 선택), Delete (선택 삭제), Esc (선택 해제)</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 툴바 */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '20px', 
+        marginBottom: '20px', 
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '16px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      }}>
+        {/* 편집 도구 */}
+        <div style={{ display: 'flex', gap: '4px', border: '1px solid #d1d5db', borderRadius: '8px', padding: '4px' }}>
+          {Object.entries(EDIT_TOOLS).map(([key, tool]) => (
+            <button
+              key={tool}
+              onClick={() => setCurrentTool(tool)}
+              style={{
+                padding: '10px 16px',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: currentTool === tool ? '#3b82f6' : 'transparent',
+                color: currentTool === tool ? 'white' : '#374151',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              {key === 'SELECT' && '🎯 선택'}
+              {key === 'ADD_SEAT' && '➕ 좌석 추가'}
+              {key === 'DELETE' && '🗑️ 삭제'}
+              {key === 'MOVE' && '↔️ 이동'}
+            </button>
+          ))}
+        </div>
+
+        {/* 좌석 타입 선택 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>좌석 타입:</label>
+          <select
+            value={currentSeatType}
+            onChange={(e) => setCurrentSeatType(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: 'white'
+            }}
+          >
+            {Object.entries(SEAT_TYPES).map(([key, type]) => (
+              <option key={key} value={key}>
+                {type.icon} {type.name} ({type.price.toLocaleString()}원)
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 편집 모드 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>모드:</label>
+          <select
+            value={editMode}
+            onChange={(e) => setEditMode(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="grid">🔲 그리드</option>
+            <option value="flexible">🔄 자유배치</option>
+          </select>
+        </div>
+
+        {/* 템플릿 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>템플릿:</label>
+          <select
+            onChange={(e) => e.target.value && applyTemplate(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: 'white'
+            }}
+            defaultValue=""
+          >
+            <option value="">템플릿 선택</option>
+            {Object.entries(TEMPLATES).map(([key, template]) => (
+              <option key={key} value={key}>
+                🏛️ {template.name} ({template.rows}×{template.cols})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 선택된 좌석 관리 */}
+      {selectedSeats.length > 0 && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>
+              ✨ {selectedSeats.length}개 좌석 선택됨
+            </span>
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={deleteSelectedSeats}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}
+              >
+                🗑️ 삭제
+              </button>
+              
+              {selectedSeats.length > 1 && (
+                <>
+                  <button
+                    onClick={() => alignSeats('horizontal')}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    ↔️ 수평정렬
+                  </button>
+                  <button
+                    onClick={() => alignSeats('vertical')}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    ↕️ 수직정렬
+                  </button>
+                  <button
+                    onClick={() => alignSeats('grid')}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    📐 격자정렬
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#92400e' }}>타입 변경:</span>
+              {Object.entries(SEAT_TYPES).map(([key, type]) => (
+                <button
+                  key={key}
+                  onClick={() => changeSelectedSeatsType(key)}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: type.color,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: '500'
+                  }}
+                  title={type.name}
+                >
+                  {type.icon}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 메인 컨테이너 */}
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+        {/* 캔버스 영역 */}
+        <div style={{ 
+          flex: 1,
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          minHeight: '600px'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px'
+          }}>
+            <h3 style={{ margin: 0, color: '#1f2937', fontSize: '18px' }}>🎪 무대 및 좌석 배치</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+                <input
+                  type="checkbox"
+                  checked={showGrid}
+                  onChange={(e) => setShowGrid(e.target.checked)}
+                />
+                그리드 표시
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+                <input
+                  type="checkbox"
+                  checked={showLabels}
+                  onChange={(e) => setShowLabels(e.target.checked)}
+                />
+                라벨 표시
+              </label>
+            </div>
+          </div>
+
+          {/* 무대 */}
+          <div style={{
+            width: '100%',
+            height: '60px',
+            backgroundColor: '#1f2937',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '16px',
+            fontWeight: '600',
+            marginBottom: '40px',
+            position: 'relative'
+          }}>
+            🎭 STAGE
+            <div style={{
+              position: 'absolute',
+              bottom: '-20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '12px',
+              color: '#6b7280'
+            }}>
+              무대
+            </div>
+          </div>
+
+          {/* 캔버스 */}
+          <div style={{ position: 'relative', overflow: 'hidden', border: '2px solid #e5e7eb', borderRadius: '8px' }}>
+            {isLoading && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    border: '4px solid #f3f4f6',
+                    borderTop: '4px solid #3b82f6',
+                    borderRadius: '50%',
+                    margin: '0 auto 12px',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <div style={{ color: '#374151', fontSize: '14px' }}>처리 중...</div>
+                </div>
+              </div>
+            )}
+
+            <div
+              ref={canvasRef}
+              onClick={handleCanvasClick}
+              style={{
+                width: canvas.width,
+                height: canvas.height,
+                position: 'relative',
+                background: showGrid ? 
+                  `radial-gradient(circle, #d1d5db 1px, transparent 1px)` : '#ffffff',
+                backgroundSize: showGrid ? `${canvas.gridSize}px ${canvas.gridSize}px` : 'auto',
+                cursor: currentTool === EDIT_TOOLS.ADD_SEAT ? 'crosshair' : 'default',
+                overflow: 'hidden'
+              }}
+            >
+              {/* 좌석들 렌더링 */}
+              {seats.map(seat => {
+                const seatType = SEAT_TYPES[seat.type] || SEAT_TYPES.REGULAR;
+                const isSelected = selectedSeats.includes(seat.id);
+                
+                return (
+                  <div
+                    key={seat.id}
+                    onClick={(e) => handleSeatClick(e, seat)}
+                    onMouseDown={(e) => handleMouseDown(e, seat)}
+                    style={{
+                      position: 'absolute',
+                      left: seat.x,
+                      top: seat.y,
+                      width: '36px',
+                      height: '36px',
+                      backgroundColor: seatType.color,
+                      border: `3px solid ${isSelected ? '#fbbf24' : 'rgba(255,255,255,0.8)'}`,
+                      borderRadius: '8px',
+                      cursor: currentTool === EDIT_TOOLS.MOVE ? 'grab' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      color: 'white',
+                      fontWeight: '600',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(251, 191, 36, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                      transition: 'all 0.2s ease',
+                      transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                      zIndex: isSelected ? 100 : 1
+                    }}
+                    title={`${seat.label} (${seatType.name}) - ${seatType.price.toLocaleString()}원`}
+                  >
+                    <div style={{ textAlign: 'center', lineHeight: '1' }}>
+                      <div style={{ fontSize: '12px' }}>
+                        {seatType.icon}
+                      </div>
+                      {showLabels && (
+                        <div style={{ fontSize: '8px', marginTop: '1px' }}>
+                          {seat.label}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 도구 안내 */}
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '6px',
+            fontSize: '13px',
+            color: '#6b7280',
+            textAlign: 'center'
+          }}>
+            {currentTool === EDIT_TOOLS.SELECT && "🎯 좌석을 클릭하여 선택하세요. Ctrl+클릭으로 다중 선택이 가능합니다."}
+            {currentTool === EDIT_TOOLS.ADD_SEAT && "➕ 빈 공간을 클릭하여 좌석을 추가하세요."}
+            {currentTool === EDIT_TOOLS.DELETE && "🗑️ 삭제할 좌석을 클릭하세요."}
+            {currentTool === EDIT_TOOLS.MOVE && "↔️ 좌석을 드래그하여 이동하세요."}
+          </div>
+        </div>
+
+        {/* 사이드 패널 */}
+        <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* 통계 패널 */}
+          <div style={{ 
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📊 통계 현황
+            </h3>
+            <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                marginBottom: '12px',
+                padding: '12px',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '6px'
+              }}>
+                <span style={{ fontWeight: '600' }}>총 좌석:</span>
+                <span style={{ color: '#3b82f6', fontWeight: '600' }}>{statistics.total || 0}개</span>
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: '#ecfdf5',
+                borderRadius: '6px'
+              }}>
+                <span style={{ fontWeight: '600' }}>예상 수익:</span>
+                <span style={{ color: '#10b981', fontWeight: '600' }}>
+                  {(statistics.totalRevenue || 0).toLocaleString()}원
+                </span>
+              </div>
+              
+              <div style={{ marginBottom: '12px', fontSize: '13px', color: '#6b7280', fontWeight: '600' }}>
+                좌석 타입별 분포:
+              </div>
+              {Object.entries(SEAT_TYPES).map(([key, type]) => {
+                const count = statistics.byType?.[key]?.count || 0;
+                const revenue = statistics.byType?.[key]?.revenue || 0;
+                return (
+                  <div key={key} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    marginBottom: '8px',
+                    padding: '8px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '4px'
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ 
+                        width: '14px', 
+                        height: '14px', 
+                        backgroundColor: type.color, 
+                        borderRadius: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '8px'
+                      }}>
+                        {type.icon}
+                      </div>
+                      <span style={{ fontSize: '13px' }}>{type.name}</span>
+                    </span>
+                    <span style={{ color: '#6b7280', fontSize: '12px' }}>
+                      {count}개 ({revenue.toLocaleString()}원)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 캔버스 설정 */}
+          <div style={{ 
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#1f2937' }}>⚙️ 설정</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '13px', 
+                  marginBottom: '8px', 
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  그리드 크기: {canvas.gridSize}px
+                </label>
+                <input
+                  type="range"
+                  min="20"
+                  max="60"
+                  value={canvas.gridSize}
+                  onChange={(e) => setCanvas(prev => ({ ...prev, gridSize: parseInt(e.target.value) }))}
+                  style={{ 
+                    width: '100%',
+                    height: '6px',
+                    borderRadius: '3px',
+                    background: '#e5e7eb',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '13px', 
+                  marginBottom: '8px', 
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  캔버스 너비: {canvas.width}px
+                </label>
+                <input
+                  type="range"
+                  min="800"
+                  max="1400"
+                  step="50"
+                  value={canvas.width}
+                  onChange={(e) => setCanvas(prev => ({ ...prev, width: parseInt(e.target.value) }))}
+                  style={{ 
+                    width: '100%',
+                    height: '6px',
+                    borderRadius: '3px',
+                    background: '#e5e7eb',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '13px', 
+                  marginBottom: '8px', 
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  캔버스 높이: {canvas.height}px
+                </label>
+                <input
+                  type="range"
+                  min="500"
+                  max="900"
+                  step="50"
+                  value={canvas.height}
+                  onChange={(e) => setCanvas(prev => ({ ...prev, height: parseInt(e.target.value) }))}
+                  style={{ 
+                    width: '100%',
+                    height: '6px',
+                    borderRadius: '3px',
+                    background: '#e5e7eb',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 빠른 액션 */}
+          <div style={{ 
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#1f2937' }}>⚡ 빠른 액션</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  if (window.confirm('모든 좌석을 삭제하시겠습니까?')) {
+                    setSeats([]);
+                    setSelectedSeats([]);
+                    updateStatistics([]);
+                  }
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🗑️ 전체 삭제
+              </button>
+              <button
+                onClick={() => setSelectedSeats(seats.map(seat => seat.id))}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🎯 전체 선택
+              </button>
+              <button
+                onClick={saveSeatLayout}
+                disabled={isLoading}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: isLoading ? '#6b7280' : '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s',
+                  opacity: isLoading ? 0.6 : 1
+                }}
+              >
+                {isLoading ? '💾 저장 중...' : '💾 저장하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CSS 애니메이션 */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        button:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        button:active:not(:disabled) {
+          transform: translateY(0);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #3b82f6;
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default SeatLayoutEditor;

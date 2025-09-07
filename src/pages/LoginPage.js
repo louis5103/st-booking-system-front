@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { setAuthData } from '../services/auth';
+import '../styles/components.css';
 
 const LoginPage = ({ onLogin }) => {
     const [formData, setFormData] = useState({
