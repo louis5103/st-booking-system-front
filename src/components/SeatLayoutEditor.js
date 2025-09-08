@@ -380,24 +380,146 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
   const saveSeatLayout = useCallback(async () => {
     setIsLoading(true);
     try {
-      const layoutData = {
-        venueId,
-        seats,
-        canvas,
-        editMode,
-        statistics
-      };
+      console.log('=== 좌석 배치 저장 시작 ===');
+      console.log('현재 좌석 개수:', seats.length);
+      console.log('첫 번째 좌석 원본:', seats[0]);
+      console.log('마지막 좌석 원본:', seats[seats.length - 1]);
       
-      const response = await seatLayoutAPI.saveSeatLayout(venueId, layoutData);
+      // 백엔드 DTO 형식에 맞게 데이터 변환
+      const layoutData = {
+        seats: seats.map((seat, index) => {
+          // 각 필드에 대해 안전한 기본값 제공
+          const seatData = {
+            id: seat.id || `seat-${Date.now()}-${index}`,
+            x: seat.x !== undefined && seat.x !== null ? Math.round(Number(seat.x)) : 100 + (index % 10) * 50,
+            y: seat.y !== undefined && seat.y !== null ? Math.round(Number(seat.y)) : 150 + Math.floor(index / 10) * 60,
+            type: seat.type || 'REGULAR',
+            section: 1, // 기본 섹션 값
+            label: seat.label || `A${index + 1}`,
+            price: seat.price !== undefined && seat.price !== null ? Number(seat.price) : 50000,
+            isActive: seat.isActive !== undefined ? Boolean(seat.isActive) : true,
+            rotation: seat.rotation !== undefined && seat.rotation !== null ? Number(seat.rotation) : 0
+          };
+          
+          // 추가 검증 및 정리
+          if (!seatData.type || seatData.type === 'undefined' || typeof seatData.type !== 'string') {
+            seatData.type = 'REGULAR';
+          }
+          if (!seatData.label || seatData.label === 'undefined' || typeof seatData.label !== 'string') {
+            seatData.label = `A${index + 1}`;
+          }
+          if (isNaN(seatData.section) || seatData.section < 1) {
+            seatData.section = 1;
+          }
+          if (isNaN(seatData.price) || seatData.price < 0) {
+            seatData.price = 50000;
+          }
+          if (isNaN(seatData.x) || seatData.x < 0) {
+            seatData.x = 100 + (index % 10) * 50;
+          }
+          if (isNaN(seatData.y) || seatData.y < 0) {
+            seatData.y = 150 + Math.floor(index / 10) * 60;
+          }
+          
+          return seatData;
+        }),
+        sections: [
+          { id: 1, name: '1구역', color: '#FF6B6B' },
+          { id: 2, name: '2구역', color: '#4ECDC4' },
+          { id: 3, name: '3구역', color: '#45B7D1' }
+        ],
+        stage: {
+          x: 200,
+          y: 50,
+          width: 200,
+          height: 60,
+          rotation: 0
+        },
+        canvas: {
+          width: canvas?.width || 800,
+          height: canvas?.height || 600,
+          gridSize: canvas?.gridSize || 40
+        },
+        editMode: editMode || 'grid'
+      };
+
+      // 상세 로깅
+      console.log('=== 전송할 데이터 분석 ===');
+      console.log('총 좌석 수:', layoutData.seats.length);
+      console.log('첫 번째 좌석:', layoutData.seats[0]);
+      console.log('마지막 좌석:', layoutData.seats[layoutData.seats.length - 1]);
+      console.log('섹션 정보:', layoutData.sections);
+      console.log('무대 정보:', layoutData.stage);
+      console.log('캔버스 정보:', layoutData.canvas);
+      
+      // 데이터 유효성 사전 검사
+      const invalidSeats = layoutData.seats.filter((seat, index) => {
+        const issues = [];
+        if (!seat.type || typeof seat.type !== 'string') issues.push('type');
+        if (!seat.label || typeof seat.label !== 'string') issues.push('label');
+        if (seat.section === null || seat.section === undefined || isNaN(seat.section)) issues.push('section');
+        if (seat.price === null || seat.price === undefined || isNaN(seat.price)) issues.push('price');
+        if (seat.x === null || seat.x === undefined || isNaN(seat.x)) issues.push('x');
+        if (seat.y === null || seat.y === undefined || isNaN(seat.y)) issues.push('y');
+        
+        if (issues.length > 0) {
+          console.log(`좌석 ${index} 문제:`, seat, '누락된 필드:', issues);
+          return true;
+        }
+        return false;
+      });
+      
+      if (invalidSeats.length > 0) {
+        console.error('=== 유효하지 않은 좌석 데이터 ===');
+        console.error('개수:', invalidSeats.length);
+        console.error('처음 5개:', invalidSeats.slice(0, 5));
+        alert(`저장할 수 없습니다. ${invalidSeats.length}개의 좌석에 필수 정보가 누락되었습니다.\n\n콘솔을 확인하여 상세 정보를 확인하세요.`);
+        return;
+      }
+      
+      console.log('=== 유효성 검사 통과, API 호출 시작 ===');
+      console.log('전송할 JSON:', JSON.stringify(layoutData, null, 2));
+      
+      // 백엔드 API 호출
+      const response = await seatLayoutAPI.saveVenueLayout(venueId, layoutData);
+      
+      console.log('=== API 응답 ===');
+      console.log('응답 전체:', response);
       
       if (response && response.success) {
         alert('좌석 배치가 저장되었습니다.');
       } else {
-        throw new Error(response?.error || '저장 실패');
+        console.error('저장 응답 오류:', response);
+        throw new Error(response?.error || response?.message || '저장 실패');
       }
     } catch (error) {
-      console.error('저장 실패:', error);
-      alert('저장에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+      console.error('=== 저장 중 예외 발생 ===');
+      console.error('에러 객체:', error);
+      console.error('에러 응답:', error.response);
+      console.error('에러 응답 데이터:', error.response?.data);
+      
+      let errorMessage = '저장 중 오류가 발생했습니다.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // 백엔드 유효성 검사 세부 오류가 있다면 표시
+      if (error.response?.data?.data && typeof error.response.data.data === 'object') {
+        console.error('=== 백엔드 유효성 검사 오류 세부사항 ===');
+        const validationErrors = error.response.data.data;
+        Object.keys(validationErrors).forEach(key => {
+          console.error(`${key}: ${validationErrors[key]}`);
+        });
+        
+        const errorCount = Object.keys(validationErrors).length;
+        errorMessage += `\n\n총 ${errorCount}개의 유효성 검사 오류가 있습니다. 콘솔을 확인하세요.`;
+      }
+      
+      alert('저장 실패: ' + errorMessage);
     } finally {
       setIsLoading(false);
     }

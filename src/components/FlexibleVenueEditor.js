@@ -28,10 +28,9 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
     WHEELCHAIR: { color: '#10B981', name: '휠체어석', price: 50000 }
   };
 
-  // 기본 템플릿 생성 (새 API와 호환)
+  // 기본 템플릿 생성 (새 API와 호환) - 안전한 버전
   const createDefaultTemplate = useCallback(() => {
     const defaultSeats = [];
-    let counter = 1;
     
     const stageY = 50;
     const firstRowY = stageY + 120;
@@ -40,38 +39,58 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
     const seatSpacing = 50;
     const rowSpacing = 60;
     const totalWidth = (cols - 1) * seatSpacing;
-    const startX = (canvasSize.width - totalWidth) / 2;
+    const startX = Math.max(50, (canvasSize.width - totalWidth) / 2);
     
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = startX + (col * seatSpacing);
         const y = firstRowY + (row * rowSpacing);
-        const sectionId = row < 2 ? 1 : 2;
-        const seatType = row < 2 ? 'PREMIUM' : 'REGULAR';
-        const rowLabel = String.fromCharCode(65 + row);
+        const sectionId = row < 2 ? 1 : row < 4 ? 2 : 3;
+        const seatType = row < 1 ? 'VIP' : row < 3 ? 'PREMIUM' : 'REGULAR';
+        const rowLabel = String.fromCharCode(65 + row); // A, B, C, D, E
+        const colLabel = col + 1; // 1, 2, 3, ...
+        const seatPrice = seatType === 'VIP' ? 100000 : seatType === 'PREMIUM' ? 75000 : 50000;
+        const seatIndex = row * cols + col;
         
-        defaultSeats.push({
-          id: `seat-default-${row}-${col}`,
-          x: x - 20,
-          y: y - 20,
-          type: seatType, // 새 API 호환
-          seatType: seatType, // 레거시 호환
+        const seatData = {
+          id: `seat-default-${row}-${col}-${Date.now()}`,
+          // 백엔드 필수 필드들 - 모두 명시적으로 설정
+          x: Math.round(Math.max(20, x - 20)),
+          y: Math.round(Math.max(20, y - 20)),
+          type: seatType,
+          section: sectionId,
+          label: `${rowLabel}${colLabel}`,
+          price: seatPrice,
+          isActive: true,
           rotation: 0,
-          section: sectionId, // 새 API 호환
-          sectionId: sectionId, // 레거시 호환
+          // 레거시 호환 필드들
+          seatType: seatType,
+          sectionId: sectionId,
+          seatLabel: `${rowLabel}${colLabel}`,
           sectionName: sections[sectionId]?.name || `${sectionId}구역`,
-          sectionColor: sections[sectionId]?.color || '#FF6B6B',
-          price: seatTypes[seatType]?.price || 50000,
-          label: `${rowLabel}${col + 1}`, // 새 API 호환
-          seatLabel: `${rowLabel}${col + 1}`, // 레거시 호환
-          isActive: true
-        });
-        counter++;
+          sectionColor: sections[sectionId]?.color || ['#FF6B6B', '#4ECDC4', '#45B7D1'][sectionId - 1] || '#FF6B6B',
+          xPosition: Math.round(Math.max(20, x - 20)),
+          yPosition: Math.round(Math.max(20, y - 20))
+        };
+        
+        // 데이터 무결성 검증
+        if (!seatData.type) seatData.type = 'REGULAR';
+        if (!seatData.label) seatData.label = `A${seatIndex + 1}`;
+        if (seatData.section === null || seatData.section === undefined) seatData.section = 1;
+        if (seatData.price === null || seatData.price === undefined) seatData.price = 50000;
+        
+        defaultSeats.push(seatData);
       }
     }
     
-    return { seats: defaultSeats, counter };
-  }, [canvasSize.width, sections, seatTypes]);
+    console.log('기본 템플릿 생성 완료:', {
+      총좌석수: defaultSeats.length,
+      첫번째좌석: defaultSeats[0],
+      마지막좌석: defaultSeats[defaultSeats.length - 1]
+    });
+    
+    return { seats: defaultSeats, counter: defaultSeats.length };
+  }, [canvasSize.width, sections]);
 
   // 데이터 로드 (새 API 사용)
   useEffect(() => {
@@ -91,23 +110,48 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
       
       if (response?.success && response.data?.seats && response.data.seats.length > 0) {
         // 새 API 데이터를 레거시 포맷으로 변환
-        const adjustedSeats = response.data.seats.map((seat, index) => ({
-          ...seat,
-          id: seat.id || `seat-${Date.now()}-${index}`,
-          // 좌표 안전성 체크
-          x: Math.max(0, Math.min(seat.x || seat.xPosition || Math.random() * (canvasSize.width - 100) + 50, canvasSize.width - 40)),
-          y: Math.max(0, Math.min(seat.y || seat.yPosition || Math.random() * (canvasSize.height - 200) + 100, canvasSize.height - 40)),
-          // 타입 호환성
-          seatType: seat.type || seat.seatType || 'REGULAR',
-          type: seat.type || seat.seatType || 'REGULAR',
-          // 섹션 호환성
-          sectionId: seat.section || seat.sectionId || 1,
-          section: seat.section || seat.sectionId || 1,
-          // 라벨 호환성
-          seatLabel: seat.label || seat.seatLabel || `${seat.sectionName || '1구역'}-${index + 1}`,
-          label: seat.label || seat.seatLabel || `${seat.sectionName || '1구역'}-${index + 1}`,
-          isActive: seat.isActive !== undefined ? seat.isActive : true
-        }));
+        const adjustedSeats = response.data.seats.map((seat, index) => {
+          // 좌표 안전성 체크 및 기본값 설정
+          const x = seat.x !== undefined && seat.x !== null ? Math.max(0, Math.min(Number(seat.x), canvasSize.width - 40)) : 100 + (index % 10) * 50;
+          const y = seat.y !== undefined && seat.y !== null ? Math.max(0, Math.min(Number(seat.y), canvasSize.height - 40)) : 150 + Math.floor(index / 10) * 60;
+          const seatType = seat.type || seat.seatType || 'REGULAR';
+          const sectionId = seat.section !== undefined && seat.section !== null ? Number(seat.section) : 
+                          seat.sectionId !== undefined && seat.sectionId !== null ? Number(seat.sectionId) : 1;
+          const label = seat.label || seat.seatLabel || `${String.fromCharCode(65 + Math.floor(index / 8))}${(index % 8) + 1}`;
+          const price = seat.price !== undefined && seat.price !== null ? Number(seat.price) : 
+                       seatType === 'VIP' ? 100000 : seatType === 'PREMIUM' ? 75000 : 50000;
+          
+          const processedSeat = {
+            ...seat,
+            id: seat.id || `seat-${Date.now()}-${index}`,
+            // 백엔드 필수 필드들
+            x: Math.round(x),
+            y: Math.round(y),
+            type: seatType,
+            section: sectionId,
+            label: label,
+            price: price,
+            isActive: seat.isActive !== undefined ? Boolean(seat.isActive) : true,
+            rotation: seat.rotation !== undefined && seat.rotation !== null ? Number(seat.rotation) : 0,
+            // 레거시 호환 필드들
+            seatType: seatType,
+            sectionId: sectionId,
+            seatLabel: label,
+            xPosition: Math.round(x),
+            yPosition: Math.round(y)
+          };
+          
+          // 섹션 색상 정보 추가
+          if (sections[sectionId]) {
+            processedSeat.sectionName = sections[sectionId].name;
+            processedSeat.sectionColor = sections[sectionId].color;
+          } else {
+            processedSeat.sectionName = `${sectionId}구역`;
+            processedSeat.sectionColor = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57'][sectionId % 5];
+          }
+          
+          return processedSeat;
+        });
         
         setSeats(adjustedSeats);
         
@@ -122,6 +166,24 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
           });
           setSections(sectionsMap);
         }
+        
+        // 캔버스 정보 업데이트
+        if (response.data.canvas) {
+          setCanvasSize({
+            width: response.data.canvas.width || 800,
+            height: response.data.canvas.height || 600
+          });
+        }
+        
+        // 무대 정보 업데이트
+        if (response.data.stage) {
+          setStage({
+            x: response.data.stage.x || 0,
+            y: response.data.stage.y || 0,
+            width: response.data.stage.width || 200,
+            height: response.data.stage.height || 60
+          });
+        }
       } else {
         // 데이터가 없는 경우 기본 템플릿 생성
         const { seats: defaultSeats } = createDefaultTemplate();
@@ -129,6 +191,7 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
       }
     } catch (error) {
       console.error('유연한 좌석 배치 로드 실패:', error);
+      console.error('오류 상세:', error.response?.data);
       // 오류 발생 시에도 기본 템플릿 생성
       const { seats: defaultSeats } = createDefaultTemplate();
       setSeats(defaultSeats);
@@ -137,47 +200,151 @@ const FlexibleVenueEditor = ({ venueId, onClose }) => {
     }
   };
 
-  // 저장 (새 API 사용)
+  // 저장 (새 API 사용) - 디버깅 강화 버전
   const saveLayout = async () => {
     try {
       setLoading(true);
       
-      // 레거시 데이터를 새 API 포맷으로 변환
+      console.log('=== 저장 시작 ===');
+      console.log('현재 좌석 개수:', seats.length);
+      console.log('첫 번째 좌석 원본:', seats[0]);
+      console.log('마지막 좌석 원본:', seats[seats.length - 1]);
+      
+      // 백엔드 DTO 형식에 맞게 데이터 변환 - 모든 필수 필드 보장
       const layoutData = {
-        seats: seats.map(seat => ({
-          id: seat.id,
-          x: Math.round(seat.x),
-          y: Math.round(seat.y),
-          type: seat.type || seat.seatType,
-          section: seat.section || seat.sectionId,
-          label: seat.label || seat.seatLabel,
-          price: seat.price,
-          isActive: seat.isActive,
-          rotation: seat.rotation || 0
-        })),
+        seats: seats.map((seat, index) => {
+          // 각 필드에 대해 안전한 기본값 제공
+          const seatData = {
+            id: seat.id || `seat-${Date.now()}-${index}`,
+            x: seat.x !== undefined && seat.x !== null ? Math.round(Number(seat.x)) : 100 + (index % 10) * 50,
+            y: seat.y !== undefined && seat.y !== null ? Math.round(Number(seat.y)) : 150 + Math.floor(index / 10) * 60,
+            type: seat.type || seat.seatType || 'REGULAR',
+            section: seat.section !== undefined && seat.section !== null ? Number(seat.section) : 
+                    seat.sectionId !== undefined && seat.sectionId !== null ? Number(seat.sectionId) : 1,
+            label: seat.label || seat.seatLabel || `A${index + 1}`,
+            price: seat.price !== undefined && seat.price !== null ? Number(seat.price) : 50000,
+            isActive: seat.isActive !== undefined ? Boolean(seat.isActive) : true,
+            rotation: seat.rotation !== undefined && seat.rotation !== null ? Number(seat.rotation) : 0
+          };
+          
+          // 추가 검증 및 정리
+          if (!seatData.type || seatData.type === 'undefined' || typeof seatData.type !== 'string') {
+            seatData.type = 'REGULAR';
+          }
+          if (!seatData.label || seatData.label === 'undefined' || typeof seatData.label !== 'string') {
+            seatData.label = `A${index + 1}`;
+          }
+          if (isNaN(seatData.section) || seatData.section < 1) {
+            seatData.section = 1;
+          }
+          if (isNaN(seatData.price) || seatData.price < 0) {
+            seatData.price = 50000;
+          }
+          if (isNaN(seatData.x) || seatData.x < 0) {
+            seatData.x = 100 + (index % 10) * 50;
+          }
+          if (isNaN(seatData.y) || seatData.y < 0) {
+            seatData.y = 150 + Math.floor(index / 10) * 60;
+          }
+          
+          return seatData;
+        }),
         sections: Object.entries(sections).map(([id, section]) => ({
-          id: parseInt(id),
-          name: section.name,
-          color: section.color
+          id: parseInt(id) || 1,
+          name: section?.name || `${id}구역`,
+          color: section?.color || '#FF6B6B'
         })),
+        stage: {
+          x: stage?.x !== undefined ? Math.round(Number(stage.x + 50)) : 200,
+          y: stage?.y !== undefined ? Math.round(Number(stage.y + 30)) : 50,
+          width: stage?.width !== undefined ? Math.round(Number(stage.width)) : 200,
+          height: stage?.height !== undefined ? Math.round(Number(stage.height)) : 60,
+          rotation: 0
+        },
         canvas: {
-          width: canvasSize.width,
-          height: canvasSize.height,
+          width: canvasSize?.width || 800,
+          height: canvasSize?.height || 600,
           gridSize: 40
         },
         editMode: 'flexible'
       };
 
+      // 상세 로깅
+      console.log('=== 전송할 데이터 분석 ===');
+      console.log('총 좌석 수:', layoutData.seats.length);
+      console.log('첫 번째 좌석:', layoutData.seats[0]);
+      console.log('마지막 좌석:', layoutData.seats[layoutData.seats.length - 1]);
+      console.log('섹션 정보:', layoutData.sections);
+      console.log('무대 정보:', layoutData.stage);
+      console.log('캔버스 정보:', layoutData.canvas);
+      
+      // 데이터 유효성 사전 검사
+      const invalidSeats = layoutData.seats.filter((seat, index) => {
+        const issues = [];
+        if (!seat.type || typeof seat.type !== 'string') issues.push('type');
+        if (!seat.label || typeof seat.label !== 'string') issues.push('label');
+        if (seat.section === null || seat.section === undefined || isNaN(seat.section)) issues.push('section');
+        if (seat.price === null || seat.price === undefined || isNaN(seat.price)) issues.push('price');
+        if (seat.x === null || seat.x === undefined || isNaN(seat.x)) issues.push('x');
+        if (seat.y === null || seat.y === undefined || isNaN(seat.y)) issues.push('y');
+        
+        if (issues.length > 0) {
+          console.log(`좌석 ${index} 문제:`, seat, '누락된 필드:', issues);
+          return true;
+        }
+        return false;
+      });
+      
+      if (invalidSeats.length > 0) {
+        console.error('=== 유효하지 않은 좌석 데이터 ===');
+        console.error('개수:', invalidSeats.length);
+        console.error('처음 5개:', invalidSeats.slice(0, 5));
+        alert(`저장할 수 없습니다. ${invalidSeats.length}개의 좌석에 필수 정보가 누락되었습니다.\n\n콘솔을 확인하여 상세 정보를 확인하세요.`);
+        return;
+      }
+      
+      console.log('=== 유효성 검사 통과, API 호출 시작 ===');
+      console.log('전송할 JSON:', JSON.stringify(layoutData, null, 2));
+
       const response = await seatLayoutAPI.saveVenueLayout(venueId, layoutData);
+      
+      console.log('=== API 응답 ===');
+      console.log('응답 전체:', response);
       
       if (response?.success) {
         alert('좌석 배치가 저장되었습니다!');
       } else {
-        throw new Error(response?.error || '저장 실패');
+        console.error('저장 응답 오류:', response);
+        alert(`저장에 실패했습니다: ${response?.error || response?.message || '알 수 없는 오류'}`);
       }
     } catch (error) {
-      console.error('좌석 배치 저장 실패:', error);
-      alert('저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('=== 저장 중 예외 발생 ===');
+      console.error('에러 객체:', error);
+      console.error('에러 응답:', error.response);
+      console.error('에러 응답 데이터:', error.response?.data);
+      
+      let errorMessage = '저장 중 오류가 발생했습니다.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // 백엔드 유효성 검사 세부 오류가 있다면 표시
+      if (error.response?.data?.data && typeof error.response.data.data === 'object') {
+        console.error('=== 백엔드 유효성 검사 오류 세부사항 ===');
+        const validationErrors = error.response.data.data;
+        Object.keys(validationErrors).forEach(key => {
+          console.error(`${key}: ${validationErrors[key]}`);
+        });
+        
+        const errorCount = Object.keys(validationErrors).length;
+        errorMessage += `\n\n총 ${errorCount}개의 유효성 검사 오류가 있습니다. 콘솔을 확인하세요.`;
+      }
+      
+      alert(`저장 실패: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
