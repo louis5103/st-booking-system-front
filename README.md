@@ -1,70 +1,145 @@
-# Getting Started with Create React App
+# 🎭 ST 통합예매관리시스템 - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React 기반의 공연 예매 시스템 프론트엔드 애플리케이션입니다.
 
-## Available Scripts
+## 📋 프로젝트 개요
 
-In the project directory, you can run:
+이 프로젝트는 **Spring Boot** 백엔드와 **React** 프론트엔드로 구성된 통합 예매 관리 시스템입니다.
 
-### `npm start`
+### 🛠 기술 스택
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React 19.1.1, React Router DOM 7.7.1
+- **HTTP Client**: Axios 1.11.0
+- **Build Tool**: Create React App
+- **Authentication**: JWT Token 기반
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### ✨ 주요 기능
 
-### `npm test`
+- 🔐 **사용자 인증**: JWT 토큰 기반 로그인/로그아웃, 역할별 권한 관리
+- 🎪 **공연 관리**: 공연 목록 조회, 검색 및 정렬 기능
+- 🪑 **좌석 예매**: 실시간 좌석 현황 확인, 좌석 선택 및 예매
+- 📊 **사용자 대시보드**: 내 예매 내역 관리
+- 🎯 **관리자 기능**: 공연 등록/수정/삭제, 사용자 관리
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🚀 시작하기
 
-### `npm run build`
+### 필수 조건
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Node.js 14.0.0 이상
+- npm 또는 yarn
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 설치 및 실행
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+# 의존성 설치
+npm install
 
-### `npm run eject`
+# 개발 서버 실행 (http://localhost:3000)
+npm start
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# 빌드
+npm run build
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# 테스트 실행
+npm test
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🎯 시연용 계정 정보
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 👤 일반 사용자 계정
 
-## Learn More
+**사용자 1:**
+- 이메일: `user1@test.com`
+- 비밀번호: `user123`
+- 권한: 공연 조회, 예매, 내 예매 관리
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**사용자 2:**
+- 이메일: `user2@test.com`
+- 비밀번호: `user123`
+- 권한: 공연 조회, 예매, 내 예매 관리
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 👨‍💼 관리자 계정
 
-### Code Splitting
+- 이메일: `admin@st-booking.com`
+- 비밀번호: `admin123`
+- 권한: 전체 시스템 관리, 공연 등록/수정/삭제, 사용자 관리
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 📖 테스트 시나리오
 
-### Analyzing the Bundle Size
+1. **일반 사용자 기능 테스트**
+   - 일반 사용자로 로그인하여 공연 목록 확인
+   - 원하는 공연 선택 후 좌석 선택 및 예매
+   - '내 예매' 메뉴에서 예매 내역 확인
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+2. **관리자 기능 테스트**
+   - 관리자 계정으로 로그인하여 관리 기능 확인
+   - 새로운 공연 등록 및 기존 공연 수정
+   - 예매 현황 및 사용자 관리
 
-### Making a Progressive Web App
+## 🏗 프로젝트 구조
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```
+src/
+├── components/          # 재사용 가능한 컴포넌트
+├── pages/              # 페이지 컴포넌트
+├── services/           # API 서비스 및 인증 로직
+├── styles/             # CSS 스타일 파일
+└── App.js              # 메인 애플리케이션 컴포넌트
+```
 
-### Advanced Configuration
+## 🔗 관련 프로젝트
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- **백엔드**: `st-booking-system-backend` (Spring Boot)
+- **Database**: MySQL
 
-### Deployment
+## 🌐 API 연동
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+백엔드 서버가 `http://localhost:8080`에서 실행되어야 합니다.
 
-### `npm run build` fails to minify
+주요 API 엔드포인트:
+- `/auth/login` - 로그인
+- `/auth/register` - 회원가입
+- `/performances` - 공연 관리
+- `/bookings` - 예매 관리
+- `/admin` - 관리자 기능
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 📱 반응형 디자인
+
+모바일, 태블릿, 데스크톱 모든 디바이스에서 최적화된 사용자 경험을 제공합니다.
+
+## 🤝 기여하기
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스를 따릅니다.
+
+---
+
+## 💡 추가 정보
+
+### 개발 환경 설정
+
+```bash
+# 캐시 초기화 후 실행
+npm run start:fresh
+
+# 특정 포트에서 실행
+PORT=3001 npm start
+```
+
+### 빌드 최적화
+
+프로덕션 빌드는 코드 분할 및 최적화를 포함하여 최상의 성능을 제공합니다.
+
+### 브라우저 지원
+
+- Chrome (최신 버전)
+- Firefox (최신 버전)
+- Safari (최신 버전)
+- Edge (최신 버전)
