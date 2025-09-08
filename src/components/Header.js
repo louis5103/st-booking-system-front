@@ -86,7 +86,7 @@ const Header = ({ user, onLogout }) => {
                             <button 
                                 onClick={handleLogout} 
                                 className="nav-link logout-btn"
-                                style={{...linkStyle, backgroundColor: '#e74c3c', border: '2px solid #c0392b'}}
+                                style={{...linkStyle, backgroundColor: '#C41E3A', border: '2px solid #A0171F', color: 'white'}}
                             >
                                 로그아웃
                             </button>

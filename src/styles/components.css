@@ -1,11 +1,11 @@
-/* 헤더 스타일 */
+/* 헤더 스타일 - 서울과학기술대학교 컴러 스키 */
 header.header {
-    background: linear-gradient(135deg, #2c3e50, #3498db) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    background: linear-gradient(135deg, #003876 0%, #1B5F96 50%, #003876 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,56,118,0.3) !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 100 !important;
-    border-bottom: 3px solid #e74c3c !important;
+    border-bottom: 4px solid #C41E3A !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -74,14 +74,14 @@ header.header {
 }
 
 .header .logout-btn {
-    background-color: #e74c3c !important;
-    border: 2px solid #c0392b !important;
+    background-color: #C41E3A !important;
+    border: 2px solid #A0171F !important;
 }
 
 .header .logout-btn:hover {
-    background-color: #c0392b !important;
-    border-color: #a93226 !important;
-    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3) !important;
+    background-color: #A0171F !important;
+    border-color: #8B141B !important;
+    box-shadow: 0 4px 8px rgba(196, 30, 58, 0.3) !important;
 }
 
 /* 공연목록그룹 헤더 서브 메뉴 */
@@ -171,10 +171,12 @@ header.header {
 .hero-section {
     text-align: center;
     padding: 3rem 0;
-    background: linear-gradient(135deg, #3498db, #2c3e50);
+    background: linear-gradient(135deg, #003876 0%, #1B5F96 50%, #003876 100%);
     color: white;
     border-radius: 8px;
     margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 56, 118, 0.3);
+    border: 2px solid rgba(196, 30, 58, 0.2);
 }
 
 .hero-section h1 {

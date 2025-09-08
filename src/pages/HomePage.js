@@ -72,7 +72,7 @@ const HomePage = () => {
     return (
         <div className="home-page">
             <div className="hero-section">
-                <h1>ST 통합예매관리시스템</h1>
+                <h1>서울과학기술대학교 통합예매관리시스템</h1>
                 <p>다양한 공연을 한 곳에서 쉽고 빠르게 예매하세요</p>
             </div>
 

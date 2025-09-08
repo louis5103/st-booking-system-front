@@ -1,10 +1,11 @@
-/* Demo Information Section Styles */
+/* Demo Information Section Styles - 서울과학기술대학교 컴러 스키 */
 .demo-info-section {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #E8F4FD 0%, #F0F8FF 50%, #E8F4FD 100%);
   padding: 3rem 2rem;
   margin: 2rem 0;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 56, 118, 0.15);
+  border: 2px solid rgba(0, 56, 118, 0.1);
 }
 
 .demo-header {
@@ -13,14 +14,14 @@
 }
 
 .demo-header h2 {
-  color: #2c3e50;
+  color: #003876;
   font-size: 2.5rem;
   margin-bottom: 1rem;
   font-weight: 700;
 }
 
 .demo-header p {
-  color: #5a6c7d;
+  color: #1B5F96;
   font-size: 1.2rem;
   max-width: 600px;
   margin: 0 auto;
@@ -38,22 +39,22 @@
   background: white;
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 56, 118, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: 1px solid #e1e8ed;
+  border: 1px solid rgba(0, 56, 118, 0.1);
 }
 
 .demo-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 56, 118, 0.2);
 }
 
 .demo-card h3 {
-  color: #2c3e50;
+  color: #003876;
   font-size: 1.4rem;
   margin-bottom: 1.5rem;
   font-weight: 600;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 2px solid #C41E3A;
   padding-bottom: 0.5rem;
 }
 
@@ -85,16 +86,16 @@
 }
 
 .login-info {
-  background: #f8f9fa;
+  background: #F0F8FF;
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 1rem;
-  border-left: 4px solid #3498db;
+  border-left: 4px solid #003876;
 }
 
 .login-info.admin {
-  background: #fff5f5;
-  border-left-color: #e74c3c;
+  background: #FFF5F5;
+  border-left-color: #C41E3A;
 }
 
 .login-info:last-child {
@@ -117,11 +118,12 @@
   background: white;
   padding: 2.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 56, 118, 0.1);
+  border: 1px solid rgba(0, 56, 118, 0.1);
 }
 
 .demo-features h3 {
-  color: #2c3e50;
+  color: #003876;
   font-size: 1.8rem;
   text-align: center;
   margin-bottom: 2rem;
@@ -144,34 +146,35 @@
 }
 
 .feature:hover {
-  background: #e9ecef;
-  border-color: #3498db;
+  background: #F0F8FF;
+  border-color: #003876;
   transform: translateY(-3px);
 }
 
 .feature h4 {
-  color: #2c3e50;
+  color: #003876;
   font-size: 1.2rem;
   margin-bottom: 1rem;
   font-weight: 600;
 }
 
 .feature p {
-  color: #5a6c7d;
+  color: #666666;
   line-height: 1.5;
   margin: 0;
   font-size: 0.95rem;
 }
 
-/* Hero section styles enhancement */
+/* Hero section styles enhancement - 서울과학기술대학교 컴러 */
 .hero-section {
   text-align: center;
   padding: 4rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #003876 0%, #1B5F96 50%, #003876 100%);
   color: white;
   border-radius: 12px;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 56, 118, 0.3);
+  border: 2px solid rgba(196, 30, 58, 0.2);
 }
 
 .hero-section h1 {
