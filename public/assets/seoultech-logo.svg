@@ -1,0 +1,26 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- 외곽 원 -->
+  <circle cx="30" cy="30" r="29" fill="white" stroke="#003876" stroke-width="2"/>
+  
+  <!-- 상단 텍스트 -->
+  <path d="M 8 15 Q 30 8 52 15" stroke="#003876" stroke-width="1" fill="none"/>
+  <text x="30" y="13" text-anchor="middle" font-family="Arial, sans-serif" font-size="4" fill="#003876" font-weight="bold">SEOUL NATIONAL UNIV. OF SCIENCE & TECHNOLOGY</text>
+  
+  <!-- 중앙 로고 부분 -->
+  <g transform="translate(30,30)">
+    <!-- 빨간 부분 (상단) -->
+    <rect x="-8" y="-12" width="16" height="8" fill="#C41E3A"/>
+    
+    <!-- 파란 부분 (좌측) -->
+    <rect x="-12" y="-4" width="8" height="16" fill="#003876"/>
+    
+    <!-- 회색 부분 (우측) -->
+    <rect x="4" y="-4" width="8" height="16" fill="#666666"/>
+    
+    <!-- 흰색 중앙 부분 -->
+    <rect x="-4" y="-4" width="8" height="8" fill="white"/>
+  </g>
+  
+  <!-- 하단 연도 -->
+  <text x="30" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" fill="#003876" font-weight="bold">1910</text>
+</svg>

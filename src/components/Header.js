@@ -9,14 +9,14 @@ const Header = ({ user, onLogout }) => {
         navigate('/');
     };
 
-    // CSS 디버깅을 위한 인라인 스타일 백업
+    // 서울과학기술대학교 컴러 스키 인라인 스타일
     const headerStyle = {
-        background: 'linear-gradient(135deg, #2c3e50, #3498db)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        background: 'linear-gradient(135deg, #003876 0%, #1B5F96 50%, #003876 100%)',
+        boxShadow: '0 4px 12px rgba(0,56,118,0.3)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        borderBottom: '3px solid #e74c3c',
+        borderBottom: '4px solid #C41E3A',
         width: '100%',
         margin: 0,
         padding: 0
@@ -61,7 +61,17 @@ const Header = ({ user, onLogout }) => {
         <header className="header" style={headerStyle}>
             <div className="header-container" style={containerStyle}>
                 <Link to="/" className="logo" style={logoStyle}>
-                    <h1 style={{margin: 0, fontSize: '1.8rem', fontWeight: 'bold', textShadow: '2px 2px 4px rgba(0,0,0,0.3)', color: 'white'}}>ST 통합예매관리시스템</h1>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                        <img 
+                            src="/assets/seoultech-logo.svg" 
+                            alt="서울과학기술대학교 로고" 
+                            style={{height: '50px', width: '50px'}}
+                        />
+                        <div>
+                            <h1 style={{margin: 0, fontSize: '1.6rem', fontWeight: 'bold', textShadow: '2px 2px 4px rgba(0,0,0,0.3)', color: 'white', lineHeight: '1.2'}}>서울과학기술대학교</h1>
+                            <p style={{margin: 0, fontSize: '0.9rem', color: '#E8F4FD', opacity: 0.9}}>통합예매관리시스템</p>
+                        </div>
+                    </div>
                 </Link>
 
                 <nav className="nav" style={navStyle}>

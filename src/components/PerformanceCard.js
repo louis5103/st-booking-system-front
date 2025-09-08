@@ -17,14 +17,59 @@ const PerformanceCard = ({ performance, showAdminButtons = false, onEdit, onDele
         return new Intl.NumberFormat('ko-KR').format(price);
     };
 
+    // 공연 타입에 따른 아이콘과 색상 결정
+    const getPerformanceStyle = (title) => {
+        const lowerTitle = title.toLowerCase();
+        if (lowerTitle.includes('교향곡') || lowerTitle.includes('클래식') || lowerTitle.includes('베토벤')) {
+            return {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                icon: '🎼'
+            };
+        } else if (lowerTitle.includes('뮤지컬') || lowerTitle.includes('레미제라블')) {
+            return {
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                icon: '🎭'
+            };
+        } else if (lowerTitle.includes('발레') || lowerTitle.includes('백조')) {
+            return {
+                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                icon: '🩰'
+            };
+        } else {
+            return {
+                background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                icon: '🎪'
+            };
+        }
+    };
+
+    const performanceStyle = getPerformanceStyle(performance.title);
+
     return (
         <div className="performance-card">
             <div className="performance-image">
                 {performance.imageUrl ? (
-                    <img src={performance.imageUrl} alt={performance.title} />
-                ) : (
-                    <div className="no-image">이미지 없음</div>
-                )}
+                    <img 
+                        src={performance.imageUrl} 
+                        alt={performance.title}
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                    />
+                ) : null}
+                <div 
+                    className="performance-placeholder"
+                    style={{
+                        background: performanceStyle.background,
+                        display: performance.imageUrl ? 'none' : 'flex'
+                    }}
+                >
+                    <div className="placeholder-content">
+                        <span className="placeholder-icon">{performanceStyle.icon}</span>
+                        <span className="placeholder-text">{performance.title}</span>
+                    </div>
+                </div>
             </div>
 
             <div className="performance-info">
