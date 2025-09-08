@@ -1,0 +1,31 @@
+<!-- 더 정확한 서울과학기술대학교 로고 SVG -->
+<svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- 외곽 원 -->
+  <circle cx="50" cy="50" r="48" fill="white" stroke="#003876" stroke-width="2"/>
+  
+  <!-- 상단 텍스트 (곡선) -->
+  <path id="top-curve" d="M 15 25 Q 50 10 85 25" stroke="none" fill="none"/>
+  <text font-family="Arial, sans-serif" font-size="5" fill="#003876" font-weight="bold">
+    <textPath href="#top-curve" startOffset="50%" text-anchor="middle">
+      SEOUL NAT'L UNIV. OF SCIENCE &amp; TECHNOLOGY
+    </textPath>
+  </text>
+  
+  <!-- 중앙 로고 부분 - 더 정확한 비율 -->
+  <g transform="translate(50,45)">
+    <!-- 빨간 부분 (상단) - ㅗ 형태 -->
+    <rect x="-12" y="-15" width="24" height="6" fill="#C41E3A"/>
+    <rect x="-3" y="-9" width="6" height="12" fill="#C41E3A"/>
+    
+    <!-- 파란 부분 (좌측) - ㅏ 형태 -->
+    <rect x="-18" y="-3" width="6" height="18" fill="#003876"/>
+    <rect x="-12" y="6" width="12" height="6" fill="#003876"/>
+    
+    <!-- 회색 부분 (우측) - ㅓ 형태 -->
+    <rect x="12" y="-3" width="6" height="18" fill="#666666"/>
+    <rect x="0" y="6" width="12" height="6" fill="#666666"/>
+  </g>
+  
+  <!-- 하단 연도 -->
+  <text x="50" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#003876" font-weight="bold">1910</text>
+</svg>

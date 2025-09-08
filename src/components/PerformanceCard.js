@@ -3,23 +3,30 @@ import { Link } from 'react-router-dom';
 
 const PerformanceCard = ({ performance, showAdminButtons = false, onEdit, onDelete }) => {
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        if (!dateString) return '일정 미정';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '일정 미정';
+            return date.toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return '일정 미정';
+        }
     };
 
     const formatPrice = (price) => {
+        if (!price || isNaN(price)) return '0';
         return new Intl.NumberFormat('ko-KR').format(price);
     };
 
     // 공연 타입에 따른 아이콘과 색상 결정
     const getPerformanceStyle = (title) => {
-        const lowerTitle = title.toLowerCase();
+        const lowerTitle = (title || '').toLowerCase();
         if (lowerTitle.includes('교향곡') || lowerTitle.includes('클래식') || lowerTitle.includes('베토벤')) {
             return {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -45,6 +52,13 @@ const PerformanceCard = ({ performance, showAdminButtons = false, onEdit, onDele
 
     const performanceStyle = getPerformanceStyle(performance.title);
 
+    // 안전한 데이터 처리
+    const title = performance.title || '제목 없음';
+    const venue = performance.venue || performance.venueName || '장소 미정';
+    const price = performance.price || 0;
+    const totalSeats = performance.totalSeats || 0;
+    const bookedSeats = performance.bookedSeats || 0;
+
     return (
         <div className="performance-card">
             <div className="performance-image">
@@ -67,18 +81,18 @@ const PerformanceCard = ({ performance, showAdminButtons = false, onEdit, onDele
                 >
                     <div className="placeholder-content">
                         <span className="placeholder-icon">{performanceStyle.icon}</span>
-                        <span className="placeholder-text">{performance.title}</span>
+                        <span className="placeholder-text">{title}</span>
                     </div>
                 </div>
             </div>
 
             <div className="performance-info">
-                <h3 className="performance-title">{performance.title}</h3>
-                <p className="performance-venue">{performance.venue}</p>
+                <h3 className="performance-title">{title}</h3>
+                <p className="performance-venue">{venue}</p>
                 <p className="performance-date">{formatDate(performance.performanceDate)}</p>
-                <p className="performance-price">{formatPrice(performance.price)}원</p>
+                <p className="performance-price">{formatPrice(price)}원</p>
                 <p className="performance-seats">
-                    잔여석: {performance.totalSeats - performance.bookedSeats}/{performance.totalSeats}
+                    잔여석: {totalSeats - bookedSeats}/{totalSeats}
                 </p>
             </div>
 
@@ -88,11 +102,11 @@ const PerformanceCard = ({ performance, showAdminButtons = false, onEdit, onDele
                         to={`/booking/${performance.id}`}
                         className="btn btn-primary"
                         style={{
-                            opacity: performance.totalSeats === performance.bookedSeats ? 0.5 : 1,
-                            pointerEvents: performance.totalSeats === performance.bookedSeats ? 'none' : 'auto'
+                            opacity: totalSeats === bookedSeats ? 0.5 : 1,
+                            pointerEvents: totalSeats === bookedSeats ? 'none' : 'auto'
                         }}
                     >
-                        {performance.totalSeats === performance.bookedSeats ? '매진' : '예매하기'}
+                        {totalSeats === bookedSeats ? '매진' : '예매하기'}
                     </Link>
                 ) : (
                     <div className="admin-buttons">

@@ -1,0 +1,42 @@
+<svg width="60" height="60" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 외곽 원 배경 -->
+  <circle cx="100" cy="100" r="98" fill="white" stroke="#003876" stroke-width="3"/>
+  
+  <!-- 상단 한글 텍스트 (곡선) -->
+  <defs>
+    <path id="top-curve" d="M 30 60 Q 100 25 170 60"/>
+  </defs>
+  <text font-family="Arial, sans-serif" font-size="12" fill="#003876" font-weight="bold">
+    <textPath href="#top-curve" startOffset="50%" text-anchor="middle">
+      서울과학기술대학교
+    </textPath>
+  </text>
+  
+  <!-- 하단 영문 텍스트 (곡선) -->
+  <defs>
+    <path id="bottom-curve" d="M 25 140 Q 100 175 175 140"/>
+  </defs>
+  <text font-family="Arial, sans-serif" font-size="8" fill="#003876" font-weight="bold">
+    <textPath href="#bottom-curve" startOffset="50%" text-anchor="middle">
+      SEOUL NATIONAL UNIV. OF SCIENCE &amp; TECHNOLOGY
+    </textPath>
+  </text>
+  
+  <!-- 중앙 십자가 로고 -->
+  <g transform="translate(100,100)">
+    <!-- 빨간색 상단 부분 -->
+    <rect x="-20" y="-25" width="40" height="15" fill="#C41E3A"/>
+    
+    <!-- 파란색 좌측 부분 -->
+    <rect x="-35" y="-10" width="15" height="40" fill="#003876"/>
+    
+    <!-- 회색 우측 부분 -->
+    <rect x="20" y="-10" width="15" height="40" fill="#8B8B8B"/>
+    
+    <!-- 흰색 중앙 부분 -->
+    <rect x="-20" y="-10" width="40" height="15" fill="white"/>
+  </g>
+  
+  <!-- 하단 연도 -->
+  <text x="100" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#003876" font-weight="bold">1910</text>
+</svg>

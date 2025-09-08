@@ -29,21 +29,40 @@ const HomePage = () => {
 
     // 검색 및 정렬 로직
     const filteredAndSortedPerformances = React.useMemo(() => {
-        let filtered = performances.filter(performance =>
-            performance.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            performance.venue.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        // performances가 비어있거나 undefined인 경우 빈 배열 반환
+        if (!performances || performances.length === 0) {
+            return [];
+        }
+        
+        let filtered = performances.filter(performance => {
+            // performance 객체가 존재하지 않는 경우 제외
+            if (!performance) return false;
+            
+            // undefined 값 처리를 위한 안전한 검색
+            const title = performance.title || '';
+            const venue = performance.venue || performance.venueName || '';
+            const searchTermLower = searchTerm.toLowerCase();
+            
+            return title.toLowerCase().includes(searchTermLower) ||
+                   venue.toLowerCase().includes(searchTermLower);
+        });
 
         // 정렬
         filtered.sort((a, b) => {
             switch (sortBy) {
                 case 'title':
-                    return a.title.localeCompare(b.title);
+                    const titleA = a.title || '';
+                    const titleB = b.title || '';
+                    return titleA.localeCompare(titleB);
                 case 'price':
-                    return a.price - b.price;
+                    const priceA = a.price || 0;
+                    const priceB = b.price || 0;
+                    return priceA - priceB;
                 case 'date':
                 default:
-                    return new Date(a.performanceDate) - new Date(b.performanceDate);
+                    const dateA = a.performanceDate ? new Date(a.performanceDate) : new Date(0);
+                    const dateB = b.performanceDate ? new Date(b.performanceDate) : new Date(0);
+                    return dateA - dateB;
             }
         });
 
