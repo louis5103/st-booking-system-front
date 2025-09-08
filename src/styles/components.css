@@ -1,81 +1,87 @@
 /* 헤더 스타일 */
-.header {
-    background: linear-gradient(135deg, #2c3e50, #3498db);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    border-bottom: 3px solid #e74c3c;
+header.header {
+    background: linear-gradient(135deg, #2c3e50, #3498db) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    border-bottom: 3px solid #e74c3c !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-.header-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    min-height: 70px;
+.header .header-container {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 2rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    min-height: 70px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-.logo {
-    text-decoration: none;
-    color: white;
-    transition: all 0.3s ease;
+.header .logo {
+    text-decoration: none !important;
+    color: white !important;
+    transition: all 0.3s ease !important;
 }
 
-.logo:hover {
-    color: #f39c12;
-    transform: scale(1.02);
+.header .logo:hover {
+    color: #f39c12 !important;
+    transform: scale(1.02) !important;
 }
 
-.logo h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+.header .logo h1 {
+    margin: 0 !important;
+    font-size: 1.8rem !important;
+    font-weight: bold !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+    color: white !important;
 }
 
-.nav {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+.header .nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.5rem !important;
 }
 
-.nav-link {
-    color: white;
-    text-decoration: none;
-    padding: 0.75rem 1.25rem;
-    border-radius: 25px;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    border: 2px solid transparent;
-    background: none;
-    cursor: pointer;
-    font-size: 1rem;
-    font-family: inherit;
+.header .nav-link {
+    color: white !important;
+    text-decoration: none !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 25px !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+    border: 2px solid transparent !important;
+    background: none !important;
+    cursor: pointer !important;
+    font-size: 1rem !important;
+    font-family: inherit !important;
 }
 
-.nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+.header .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
 }
 
-.nav-link:active {
-    transform: translateY(0);
+.header .nav-link:active {
+    transform: translateY(0) !important;
 }
 
-.logout-btn {
-    background-color: #e74c3c;
-    border: 2px solid #c0392b;
+.header .logout-btn {
+    background-color: #e74c3c !important;
+    border: 2px solid #c0392b !important;
 }
 
-.logout-btn:hover {
-    background-color: #c0392b;
-    border-color: #a93226;
-    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+.header .logout-btn:hover {
+    background-color: #c0392b !important;
+    border-color: #a93226 !important;
+    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3) !important;
 }
 
 /* 공연목록그룹 헤더 서브 메뉴 */
