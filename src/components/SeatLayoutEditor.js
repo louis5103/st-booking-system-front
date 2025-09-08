@@ -18,12 +18,14 @@ const EDIT_TOOLS = {
   MOVE: 'move'
 };
 
-// 템플릿 목록
+// 템플릿 목록 (백엔드와 일치하는 이름으로 수정)
 const TEMPLATES = {
-  THEATER: { name: '극장형', rows: 20, cols: 30, description: '전통적인 극장 배치' },
-  CONCERT: { name: '콘서트홀', rows: 15, cols: 40, description: '콘서트에 최적화' },
-  CLASSROOM: { name: '강의실', rows: 10, cols: 20, description: '교육용 배치' },
-  STADIUM: { name: '스타디움', rows: 50, cols: 60, description: '대규모 경기장' }
+  THEATER: { name: '극장형', rows: 20, cols: 30, description: '전통적인 극장 배치', backendKey: 'theater' },
+  CONCERT: { name: '콘서트홀', rows: 15, cols: 40, description: '콘서트에 최적화', backendKey: 'concert_hall' },
+  CLASSROOM: { name: '강의실', rows: 10, cols: 20, description: '교육용 배치', backendKey: 'classroom' },
+  STADIUM: { name: '스타디움', rows: 50, cols: 60, description: '대규모 경기장', backendKey: 'stadium' },
+  SMALL_THEATER: { name: '소형 극장', rows: 10, cols: 15, description: '소규모 공연장', backendKey: 'small_theater' },
+  LARGE_THEATER: { name: '대형 극장', rows: 25, cols: 40, description: '대규모 극장', backendKey: 'large_theater' }
 };
 
 const SeatLayoutEditor = ({ venueId = 1 }) => {
@@ -41,6 +43,9 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
   const [showLabels, setShowLabels] = useState(true);
   const [statistics, setStatistics] = useState({});
   const [showHelp, setShowHelp] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 }); // 마우스 위치
+  const [showCoordinates, setShowCoordinates] = useState(true); // 좌표 표시
+  const [previewSeat, setPreviewSeat] = useState(null); // 좌석 미리보기
 
   // 참조
   const canvasRef = useRef(null);
@@ -144,6 +149,42 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
     ));
   }, [selectedSeats]);
 
+  // 캔버스 마우스 이동 처리
+  const handleCanvasMouseMove = useCallback((e) => {
+    if (!canvasRef.current) return;
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    setMousePosition({ x, y });
+    
+    if (currentTool === EDIT_TOOLS.ADD_SEAT && !isDragging) {
+      const snapped = snapToGrid(x, y);
+      const existingSeat = seats.find(seat => 
+        Math.abs(seat.x - snapped.x) < 20 && Math.abs(seat.y - snapped.y) < 20
+      );
+      
+      if (!existingSeat) {
+        setPreviewSeat({
+          x: snapped.x,
+          y: snapped.y,
+          label: generateSeatLabel(snapped.x, snapped.y),
+          type: currentSeatType
+        });
+      } else {
+        setPreviewSeat(null);
+      }
+    } else {
+      setPreviewSeat(null);
+    }
+  }, [currentTool, isDragging, seats, snapToGrid, generateSeatLabel, currentSeatType]);
+  
+  // 캔버스 마우스 나가기 처리
+  const handleCanvasMouseLeave = useCallback(() => {
+    setPreviewSeat(null);
+  }, []);
+  
   // 캔버스 클릭 처리
   const handleCanvasClick = useCallback((e) => {
     if (isLoading || currentTool !== EDIT_TOOLS.ADD_SEAT) return;
@@ -217,8 +258,8 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
     setIsLoading(true);
     
     try {
-      // API 호출 시도
-      const response = await seatLayoutAPI.applyTemplate(venueId, templateName, {
+      // API 호출 시도 (백엔드 키 사용)
+      const response = await seatLayoutAPI.applyTemplate(venueId, template.backendKey, {
         rows: template.rows,
         cols: template.cols,
         editMode: editMode
@@ -754,6 +795,14 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
                 />
                 라벨 표시
               </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+                <input
+                  type="checkbox"
+                  checked={showCoordinates}
+                  onChange={(e) => setShowCoordinates(e.target.checked)}
+                />
+                좌표 표시
+              </label>
             </div>
           </div>
 
@@ -825,6 +874,8 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
             <div
               ref={canvasRef}
               onClick={handleCanvasClick}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseLeave={handleCanvasMouseLeave}
               style={{
                 width: Math.max(canvas.width, 800), // 최소 너비 보장
                 height: Math.max(canvas.height, 500), // 최소 높이 보장
@@ -834,7 +885,8 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
                 backgroundSize: showGrid ? `${canvas.gridSize}px ${canvas.gridSize}px` : 'auto',
                 cursor: currentTool === EDIT_TOOLS.ADD_SEAT ? 'crosshair' : 'default',
                 minWidth: '100%', // 컴테이너 너비에 맞춤
-                paddingBottom: '20px' // 하단 여백 추가
+                paddingBottom: '20px', // 하단 여백 추가
+                border: showGrid ? '1px solid #e5e7eb' : 'none'
               }}
             >
               {/* 좌석들 렌더링 */}
@@ -884,6 +936,66 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
                   </div>
                 );
               })}
+              
+              {/* 좌석 미리보기 */}
+              {previewSeat && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: previewSeat.x + (canvas.gridSize - Math.min(canvas.gridSize - 4, 36)) / 2,
+                    top: previewSeat.y + (canvas.gridSize - Math.min(canvas.gridSize - 4, 36)) / 2,
+                    width: `${Math.min(canvas.gridSize - 4, 36)}px`,
+                    height: `${Math.min(canvas.gridSize - 4, 36)}px`,
+                    backgroundColor: SEAT_TYPES[previewSeat.type]?.color || '#3B82F6',
+                    border: '3px dashed #fbbf24',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: Math.max(10, Math.min(canvas.gridSize - 4, 36) / 3),
+                    color: 'white',
+                    fontWeight: '600',
+                    opacity: 0.8,
+                    pointerEvents: 'none',
+                    zIndex: 200
+                  }}
+                >
+                  <div style={{ textAlign: 'center', lineHeight: '1' }}>
+                    <div style={{ fontSize: Math.max(8, Math.min(canvas.gridSize - 4, 36) / 4) }}>
+                      {SEAT_TYPES[previewSeat.type]?.icon || '💺'}
+                    </div>
+                    {showLabels && Math.min(canvas.gridSize - 4, 36) > 20 && (
+                      <div style={{ fontSize: Math.max(6, Math.min(canvas.gridSize - 4, 36) / 6), marginTop: '1px' }}>
+                        {previewSeat.label}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* 좌표 표시 */}
+              {showCoordinates && (
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  pointerEvents: 'none',
+                  zIndex: 150
+                }}>
+                  마우스: ({Math.round(mousePosition.x)}, {Math.round(mousePosition.y)})
+                  {currentTool === EDIT_TOOLS.ADD_SEAT && previewSeat && (
+                    <div>
+                      그리드: ({previewSeat.x}, {previewSeat.y}) | {previewSeat.label}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -898,7 +1010,7 @@ const SeatLayoutEditor = ({ venueId = 1 }) => {
             textAlign: 'center'
           }}>
             {currentTool === EDIT_TOOLS.SELECT && "🎯 좌석을 클릭하여 선택하세요. Ctrl+클릭으로 다중 선택이 가능합니다."}
-            {currentTool === EDIT_TOOLS.ADD_SEAT && "➕ 빈 공간을 클릭하여 좌석을 추가하세요."}
+            {currentTool === EDIT_TOOLS.ADD_SEAT && "➕ 빈 공간을 클릭하여 좌석을 추가하세요. 노란색 점선으로 미리보기를 확인할 수 있습니다."}
             {currentTool === EDIT_TOOLS.DELETE && "🗑️ 삭제할 좌석을 클릭하세요."}
             {currentTool === EDIT_TOOLS.MOVE && "↔️ 좌석을 드래그하여 이동하세요."}
           </div>
